@@ -36,6 +36,14 @@ DeviceSimulationPluginAudioProcessorEditor::DeviceSimulationPluginAudioProcessor
     outputVolumeLabel.setJustificationType(Justification::centredLeft);
     outputVolumeLabel.attachToComponent(outputVolumeSlider, true);
     
+    addAndMakeVisible(otherButton);
+    otherButton.setButtonText("Other IR");
+    otherButton.addListener(this);
+    
+    addAndMakeVisible(otherIRLabel);
+    otherIRLabel.setJustificationType(Justification::horizontallyCentred);
+    otherIRLabel.setText("No other IR selected", NotificationType::dontSendNotification);
+    
     setSize (400, 300);
 }
 
@@ -45,6 +53,23 @@ DeviceSimulationPluginAudioProcessorEditor::~DeviceSimulationPluginAudioProcesso
 
 void DeviceSimulationPluginAudioProcessorEditor::comboBoxChanged(ComboBox* box) {
     processor.deviceTypeParam->operator=(box->getSelectedItemIndex());
+    
+    if (otherIRLabel.getText().contains("Using:")) {
+        otherIRLabel.setText("Using IR from drop down menu", NotificationType::dontSendNotification);
+    }
+}
+
+void DeviceSimulationPluginAudioProcessorEditor::buttonClicked(Button* button) {
+    
+    if (button == &otherButton) {
+        FileChooser chooser("Select folder containing impulse responses", File::nonexistent, "*.wav");
+        if (chooser.browseForFileToOpen()) {
+            File file (chooser.getResult());
+            processor.otherIRFile = file;
+            processor.fileChanged = true;
+            otherIRLabel.setText("Using: " + file.getFileName(), NotificationType::dontSendNotification);
+        }
+    }
 }
 
 //==============================================================================
@@ -64,5 +89,11 @@ void DeviceSimulationPluginAudioProcessorEditor::resized()
     bounds.removeFromTop(15);
     
     outputVolumeSlider->setBounds(bounds.removeFromTop(30));
+    bounds.removeFromTop(15);
+    
+    otherButton.setBounds(bounds.removeFromTop(30));
+    bounds.removeFromTop(15);
+    
+    otherIRLabel.setBounds(bounds.removeFromTop(30));
     bounds.removeFromTop(15);
 }

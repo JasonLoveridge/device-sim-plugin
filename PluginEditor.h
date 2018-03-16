@@ -55,7 +55,8 @@ public Timer
 /**
 */
 class DeviceSimulationPluginAudioProcessorEditor  : public AudioProcessorEditor,
-private ComboBox::Listener
+private ComboBox::Listener,
+private Button::Listener
 {
 public:
     DeviceSimulationPluginAudioProcessorEditor (DeviceSimulationPluginAudioProcessor&);
@@ -70,11 +71,12 @@ private:
     // access the processor object that created it.
     
     void comboBoxChanged(ComboBox*) override;
+    void buttonClicked(Button*) override;
     
-    Label outputVolumeLabel, deviceTypeLabel;
+    Label outputVolumeLabel, deviceTypeLabel, otherIRLabel;
     ScopedPointer<ParameterSlider> outputVolumeSlider;
     ComboBox deviceTypeBox;
-    
+    TextButton otherButton;
     DeviceSimulationPluginAudioProcessor& processor;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DeviceSimulationPluginAudioProcessorEditor)

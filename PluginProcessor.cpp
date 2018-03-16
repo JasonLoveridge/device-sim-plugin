@@ -158,6 +158,7 @@ void DeviceSimulationPluginAudioProcessor::processBlock (AudioBuffer<float>& buf
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
+    updateParameters();
     
     dsp::AudioBlock<float> block (buffer);
     convolution.process(dsp::ProcessContextReplacing<float> (block));
@@ -181,6 +182,12 @@ void DeviceSimulationPluginAudioProcessor::updateParameters() {
         else if (type == 1) {
             convolution.loadImpulseResponse(BinaryData::iPadIR_wav, BinaryData::iPadIR_wavSize, false, true, maxSize);
         }
+    }
+    
+    if (fileChanged) {
+        fileChanged = false;
+        impulsesLoaded = true;
+        convolution.loadImpulseResponse(otherIRFile, false, true, maxSize);
     }
 }
 

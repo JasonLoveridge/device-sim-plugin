@@ -60,6 +60,10 @@ public:
     
     AudioParameterFloat* outputVolumeParam;
     AudioParameterChoice* deviceTypeParam;
+    
+    File otherIRFile;
+    bool fileChanged = false;
+    bool impulsesLoaded = false;
 
 private:
     dsp::Convolution convolution;
