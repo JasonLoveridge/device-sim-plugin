@@ -1,12 +1,12 @@
 /*
-  ==============================================================================
-
-    This file was auto-generated!
-
-    It contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
+ ==============================================================================
+ 
+ This file was auto-generated!
+ 
+ It contains the basic framework code for a JUCE plugin processor.
+ 
+ ==============================================================================
+ */
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
@@ -15,18 +15,21 @@
 //==============================================================================
 DeviceSimulationPluginAudioProcessor::DeviceSimulationPluginAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
-     : AudioProcessor (BusesProperties()
-                     #if ! JucePlugin_IsMidiEffect
-                      #if ! JucePlugin_IsSynth
-                       .withInput  ("Input",  AudioChannelSet::stereo(), true)
-                      #endif
-                       .withOutput ("Output", AudioChannelSet::stereo(), true)
-                     #endif
-                       )
+: AudioProcessor (BusesProperties()
+#if ! JucePlugin_IsMidiEffect
+#if ! JucePlugin_IsSynth
+                  .withInput  ("Input",  AudioChannelSet::stereo(), true)
+#endif
+                  .withOutput ("Output", AudioChannelSet::stereo(), true)
+#endif
+                  )
 #endif
 {
     addParameter(outputVolumeParam = new AudioParameterFloat("OUTPUT", "Output Volume", {-40.f, 40.f, 0.f, 1.0f}, 0.f, "dB"));
-    addParameter(deviceTypeParam = new AudioParameterChoice("DEVICETYPE", "Device Type", {"iPhone 4s", "iPad 2"}, 0));
+    addParameter(categoryParam = new AudioParameterChoice("CATEGORY", "Device Category", {"Phone", "Laptop", "TV"}, 0));
+    addParameter(phoneTypeParam = new AudioParameterChoice("PHONETYPE", "Phone Type", {"iPhone 7 Plus", "Google Pixel XL", "iPhone X", "Samsung S8"}, 0));
+    addParameter(laptopTypeParam = new AudioParameterChoice("LAPTOPTYPE", "Laptop Type", {"MacBook Pro 2014", "MacBook Pro 2018", "Dell XPS", "Acer Chromebook"}, 0));
+    addParameter(tvTypeParam = new AudioParameterChoice("TVTYPE", "TV Type", {"Sony XBR-ZD9", "LG OLED C7", "Samsung Q9F OLED"}, 0));
 }
 
 DeviceSimulationPluginAudioProcessor::~DeviceSimulationPluginAudioProcessor()
@@ -41,29 +44,29 @@ const String DeviceSimulationPluginAudioProcessor::getName() const
 
 bool DeviceSimulationPluginAudioProcessor::acceptsMidi() const
 {
-   #if JucePlugin_WantsMidiInput
+#if JucePlugin_WantsMidiInput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 bool DeviceSimulationPluginAudioProcessor::producesMidi() const
 {
-   #if JucePlugin_ProducesMidiOutput
+#if JucePlugin_ProducesMidiOutput
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 bool DeviceSimulationPluginAudioProcessor::isMidiEffect() const
 {
-   #if JucePlugin_IsMidiEffect
+#if JucePlugin_IsMidiEffect
     return true;
-   #else
+#else
     return false;
-   #endif
+#endif
 }
 
 double DeviceSimulationPluginAudioProcessor::getTailLengthSeconds() const
@@ -74,7 +77,7 @@ double DeviceSimulationPluginAudioProcessor::getTailLengthSeconds() const
 int DeviceSimulationPluginAudioProcessor::getNumPrograms()
 {
     return 1;   // NB: some hosts don't cope very well if you tell them there are 0 programs,
-                // so this should be at least 1, even if you're not really implementing programs.
+    // so this should be at least 1, even if you're not really implementing programs.
 }
 
 int DeviceSimulationPluginAudioProcessor::getCurrentProgram()
@@ -102,8 +105,20 @@ void DeviceSimulationPluginAudioProcessor::prepareToPlay (double sampleRate, int
     // initialisation that you need..
     auto channels = static_cast<uint32> (jmin (getMainBusNumInputChannels(), getMainBusNumOutputChannels()));
     dsp::ProcessSpec spec { sampleRate, static_cast<uint32> (samplesPerBlock), channels };
+    
     convolution.prepare(spec);
+    convLL.prepare(spec);
+    convLR.prepare(spec);
+    convRL.prepare(spec);
+    convRR.prepare(spec);
     outputVolume.prepare(spec);
+    //auto maxSize = static_cast<size_t> (roundToInt (getSampleRate() * (8192.0 / 44100.0)));
+    //convolution.loadImpulseResponse(BinaryData::iPhoneIR_wav, BinaryData::iPhoneIR_wavSize, false, true, maxSize);
+    //    convLL.loadImpulseResponse(BinaryData::LLIRT_wav, BinaryData::LLIRT_wavSize, false, false, maxSize, false);
+    //    convLR.loadImpulseResponse(BinaryData::LRIRT_wav, BinaryData::LRIRT_wavSize, false, false, maxSize, false);
+    //    convRL.loadImpulseResponse(BinaryData::RLIRT_wav, BinaryData::RLIRT_wavSize, false, false, maxSize, false);
+    //    convRR.loadImpulseResponse(BinaryData::RRIRT_wav, BinaryData::RRIRT_wavSize, false, false, maxSize, false);
+    
     updateParameters();
 }
 
@@ -116,78 +131,113 @@ void DeviceSimulationPluginAudioProcessor::releaseResources()
 #ifndef JucePlugin_PreferredChannelConfigurations
 bool DeviceSimulationPluginAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
-  #if JucePlugin_IsMidiEffect
+#if JucePlugin_IsMidiEffect
     ignoreUnused (layouts);
     return true;
-  #else
+#else
     // This is the place where you check if the layout is supported.
     // In this template code we only support mono or stereo.
     if (layouts.getMainOutputChannelSet() != AudioChannelSet::mono()
-     && layouts.getMainOutputChannelSet() != AudioChannelSet::stereo())
+        && layouts.getMainOutputChannelSet() != AudioChannelSet::stereo())
         return false;
-
+    
     // This checks if the input layout matches the output layout
-   #if ! JucePlugin_IsSynth
+#if ! JucePlugin_IsSynth
     if (layouts.getMainOutputChannelSet() != layouts.getMainInputChannelSet())
         return false;
-   #endif
-
+#endif
+    
     return true;
-  #endif
+#endif
 }
 #endif
 
-void DeviceSimulationPluginAudioProcessor::processBlock (AudioBuffer<float>& buffer, MidiBuffer& midiMessages)
+void DeviceSimulationPluginAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages)
 {
     ScopedNoDenormals noDenormals;
-    auto totalNumInputChannels  = getTotalNumInputChannels();
-    auto totalNumOutputChannels = getTotalNumOutputChannels();
-
+    const int totalNumInputChannels  = getTotalNumInputChannels();
+    const int totalNumOutputChannels = getTotalNumOutputChannels();
+    
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
     // guaranteed to be empty - they may contain garbage).
     // This is here to avoid people getting screaming feedback
     // when they first compile a plugin, but obviously you don't need to keep
     // this code if your algorithm always overwrites all the output channels.
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
+    for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
+    
     updateParameters();
     
-    dsp::AudioBlock<float> block (buffer);
-    convolution.process(dsp::ProcessContextReplacing<float> (block));
-    outputVolume.process(dsp::ProcessContextReplacing<float> (block));
+    // Make copies of audio samples to be processed
+    AudioBuffer<float> bufferA, bufferB;
+    bufferA.makeCopyOf(buffer);
+    bufferB.makeCopyOf(buffer);
+    
+    // Blocks A and B are pointing to separate copies of the input audio
+    dsp::AudioBlock<float> blockA (bufferA);
+    dsp::AudioBlock<float> blockB (bufferB);
+    // Chop blocks into separate left/right channels
+    dsp::AudioBlock<float> inLeftA = blockA.getSingleChannelBlock(0);
+    dsp::AudioBlock<float> inLeftB = blockB.getSingleChannelBlock(0);
+    dsp::AudioBlock<float> inRightA = blockA.getSingleChannelBlock(1);
+    dsp::AudioBlock<float> inRightB = blockB.getSingleChannelBlock(1);
+    
+    // Perform two convolutions on each channel of input data
+    if (impulsesLoaded) {
+        convLL.process(dsp::ProcessContextReplacing<float> (inLeftA));
+        convRL.process(dsp::ProcessContextReplacing<float> (inLeftB));
+        convLR.process(dsp::ProcessContextReplacing<float> (inRightA));
+        convRR.process(dsp::ProcessContextReplacing<float> (inRightB));
+    }
+    
+    // Sum the four convolved signals together to form two output channels
+    // outBlock is pointing at the input buffer so changing its contents generates the plugin output
+    dsp::AudioBlock<float> outBlock (buffer);
+    dsp::AudioBlock<float> outLeft = outBlock.getSingleChannelBlock(0);
+    outLeft.copy(inLeftA.add(inRightA));
+    dsp::AudioBlock<float> outRight = outBlock.getSingleChannelBlock(1);
+    outRight.copy(inLeftB.add(inRightB));
+    
+    // Apply gain stage to output signal
+    outputVolume.process(dsp::ProcessContextReplacing<float> (outLeft));
+    outputVolume.process(dsp::ProcessContextReplacing<float> (outRight));
 }
 
 void DeviceSimulationPluginAudioProcessor::updateParameters() {
     auto outputdB = Decibels::decibelsToGain(outputVolumeParam->get());
     if (outputVolume.getGainLinear() != outputdB) outputVolume.setGainLinear(outputdB);
     
+    //    auto type = deviceTypeParam->getIndex();
+    //    auto currentType = deviceType.get();
+    
     auto maxSize = static_cast<size_t> (roundToInt (getSampleRate() * (8192.0 / 44100.0)));
     
-    auto type = deviceTypeParam->getIndex();
-    auto currentType = deviceType.get();
-    if (type != currentType) {
-        deviceType.set(type);
-
-        if (type == 0) {
-            convolution.loadImpulseResponse(BinaryData::iPhoneIR_wav, BinaryData::iPhoneIR_wavSize, false, true, maxSize);
-        }
-        else if (type == 1) {
-            convolution.loadImpulseResponse(BinaryData::iPadIR_wav, BinaryData::iPadIR_wavSize, false, true, maxSize);
-        }
-    }
+    //    if (type != currentType) {
+    //        deviceType.set(type);
+    //
+    //        if (type == 0) {
+    //            convolution.loadImpulseResponse(BinaryData::iPhoneIR_wav, BinaryData::iPhoneIR_wavSize, false, true, maxSize);
+    //        }
+    //        else if (type == 1) {
+    //            convolution.loadImpulseResponse(BinaryData::iPadIR_wav, BinaryData::iPadIR_wavSize, false, true, maxSize);
+    //        }
+    //        else if (type == 2) {
+    //            convolution.loadImpulseResponse(BinaryData::iPhone7sIR_wav, BinaryData::iPhone7sIR_wavSize, false, true, maxSize);
+    //        }
+    //        else if (type == 3) {
+    //            convolution.loadImpulseResponse(BinaryData::iPhone7PlusIRLiveRoom_wav, BinaryData::iPhone7PlusIRLiveRoom_wavSize, false, true, maxSize);
+    //        }
+    //    }
     
     if (fileChanged) {
         fileChanged = false;
         impulsesLoaded = true;
-        convolution.loadImpulseResponse(otherIRFile, false, true, maxSize);
+        // convolution.loadImpulseResponse(otherIRFile, false, true, maxSize);
+        convLL.loadImpulseResponse(llIR, false, false, maxSize, false);
+        convLR.loadImpulseResponse(lrIR, false, false, maxSize, false);
+        convRL.loadImpulseResponse(rlIR, false, false, maxSize, false);
+        convRR.loadImpulseResponse(rrIR, false, false, maxSize, false);
     }
 }
 
@@ -222,3 +272,4 @@ AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new DeviceSimulationPluginAudioProcessor();
 }
+

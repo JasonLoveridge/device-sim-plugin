@@ -1,12 +1,12 @@
 /*
-  ==============================================================================
-
-    This file was auto-generated!
-
-    It contains the basic framework code for a JUCE plugin editor.
-
-  ==============================================================================
-*/
+ ==============================================================================
+ 
+ This file was auto-generated!
+ 
+ It contains the basic framework code for a JUCE plugin editor.
+ 
+ ==============================================================================
+ */
 
 #pragma once
 
@@ -53,7 +53,7 @@ public Timer
 
 //==============================================================================
 /**
-*/
+ */
 class DeviceSimulationPluginAudioProcessorEditor  : public AudioProcessorEditor,
 private ComboBox::Listener,
 private Button::Listener
@@ -61,11 +61,11 @@ private Button::Listener
 public:
     DeviceSimulationPluginAudioProcessorEditor (DeviceSimulationPluginAudioProcessor&);
     ~DeviceSimulationPluginAudioProcessorEditor();
-
+    
     //==============================================================================
     void paint (Graphics&) override;
     void resized() override;
-
+    
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
@@ -73,11 +73,17 @@ private:
     void comboBoxChanged(ComboBox*) override;
     void buttonClicked(Button*) override;
     
-    Label outputVolumeLabel, deviceTypeLabel, otherIRLabel;
+    bool launchingForFirstTime = true;
+    int deviceCategory = 0;
+    
+    DeviceSimulationPluginAudioProcessor& processor;
+    Label outputVolumeLabel, deviceTypeLabel, otherIRLabel, titleLabel;
+    Label phoneButtonLabel, laptopButtonLabel, tvButtonLabel;
     ScopedPointer<ParameterSlider> outputVolumeSlider;
     ComboBox deviceTypeBox;
     TextButton otherButton;
-    DeviceSimulationPluginAudioProcessor& processor;
-
+    ToggleButton phoneButton, laptopButton, tvButton;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DeviceSimulationPluginAudioProcessorEditor)
 };
+
