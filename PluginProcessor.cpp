@@ -25,6 +25,8 @@ DeviceSimulationPluginAudioProcessor::DeviceSimulationPluginAudioProcessor()
                        )
 #endif
 {
+    addParameter(outputVolumeParam = new AudioParameterFloat("OUTPUT", "Output Volume", {-40.f, 40.f, 0.f, 1.0f}, 0.f, "dB"));
+    addParameter(deviceTypeParam = new AudioParameterChoice("DEVICETYPE", "Device Type", {"iPhone 4s", "iPad 2"}, 0));
 }
 
 DeviceSimulationPluginAudioProcessor::~DeviceSimulationPluginAudioProcessor()
@@ -98,6 +100,11 @@ void DeviceSimulationPluginAudioProcessor::prepareToPlay (double sampleRate, int
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+    auto channels = static_cast<uint32> (jmin (getMainBusNumInputChannels(), getMainBusNumOutputChannels()));
+    dsp::ProcessSpec spec { sampleRate, static_cast<uint32> (samplesPerBlock), channels };
+    convolution.prepare(spec);
+    outputVolume.prepare(spec);
+    updateParameters();
 }
 
 void DeviceSimulationPluginAudioProcessor::releaseResources()
@@ -151,11 +158,29 @@ void DeviceSimulationPluginAudioProcessor::processBlock (AudioBuffer<float>& buf
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
+    
+    dsp::AudioBlock<float> block (buffer);
+    convolution.process(dsp::ProcessContextReplacing<float> (block));
+    outputVolume.process(dsp::ProcessContextReplacing<float> (block));
+}
 
-        // ..do something to the data...
+void DeviceSimulationPluginAudioProcessor::updateParameters() {
+    auto outputdB = Decibels::decibelsToGain(outputVolumeParam->get());
+    if (outputVolume.getGainLinear() != outputdB) outputVolume.setGainLinear(outputdB);
+    
+    auto maxSize = static_cast<size_t> (roundToInt (getSampleRate() * (8192.0 / 44100.0)));
+    
+    auto type = deviceTypeParam->getIndex();
+    auto currentType = deviceType.get();
+    if (type != currentType) {
+        deviceType.set(type);
+
+        if (type == 0) {
+            convolution.loadImpulseResponse(BinaryData::iPhoneIR_wav, BinaryData::iPhoneIR_wavSize, false, true, maxSize);
+        }
+        else if (type == 1) {
+            convolution.loadImpulseResponse(BinaryData::iPadIR_wav, BinaryData::iPadIR_wavSize, false, true, maxSize);
+        }
     }
 }
 

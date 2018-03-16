@@ -13,11 +13,49 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "PluginProcessor.h"
 
+struct ParameterSlider    : public Slider,
+public Timer
+{
+    ParameterSlider (AudioProcessorParameter& p)
+    : Slider (p.getName (256)), param (p)
+    {
+        setRange (0.0, 1.0, 0.0);
+        startTimerHz (30);
+        updateSliderPos();
+    }
+    
+    void valueChanged() override
+    {
+        if (isMouseButtonDown())
+            param.setValueNotifyingHost ((float) Slider::getValue());
+        else
+            param.setValue ((float) Slider::getValue());
+    }
+    
+    void timerCallback() override       { updateSliderPos(); }
+    
+    void startedDragging() override     { param.beginChangeGesture(); }
+    void stoppedDragging() override     { param.endChangeGesture();   }
+    
+    double getValueFromText (const String& text) override   { return param.getValueForText (text); }
+    String getTextFromValue (double value) override         { return param.getText ((float) value, 1024) + " " + param.getLabel(); }
+    
+    void updateSliderPos()
+    {
+        const float newValue = param.getValue();
+        
+        if (newValue != (float) Slider::getValue() && ! isMouseButtonDown())
+            Slider::setValue (newValue);
+    }
+    
+    AudioProcessorParameter& param;
+};
 
 //==============================================================================
 /**
 */
-class DeviceSimulationPluginAudioProcessorEditor  : public AudioProcessorEditor
+class DeviceSimulationPluginAudioProcessorEditor  : public AudioProcessorEditor,
+private ComboBox::Listener
 {
 public:
     DeviceSimulationPluginAudioProcessorEditor (DeviceSimulationPluginAudioProcessor&);
@@ -30,6 +68,13 @@ public:
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
+    
+    void comboBoxChanged(ComboBox*) override;
+    
+    Label outputVolumeLabel, deviceTypeLabel;
+    ScopedPointer<ParameterSlider> outputVolumeSlider;
+    ComboBox deviceTypeBox;
+    
     DeviceSimulationPluginAudioProcessor& processor;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DeviceSimulationPluginAudioProcessorEditor)

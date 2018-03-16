@@ -55,8 +55,16 @@ public:
     //==============================================================================
     void getStateInformation (MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
+    
+    void updateParameters();
+    
+    AudioParameterFloat* outputVolumeParam;
+    AudioParameterChoice* deviceTypeParam;
 
 private:
+    dsp::Convolution convolution;
+    dsp::Gain<float> outputVolume;
+    Atomic<int> deviceType;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DeviceSimulationPluginAudioProcessor)
 };
