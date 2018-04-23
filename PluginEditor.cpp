@@ -35,6 +35,10 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     tvButton.setRadioGroupId(phoneButton.getRadioGroupId());
     tvButton.addListener(this);
     
+    addAndMakeVisible(bluetoothButton);
+    bluetoothButton.setRadioGroupId(phoneButton.getRadioGroupId());
+    bluetoothButton.addListener(this);
+    
     addAndMakeVisible(phoneButtonLabel);
     phoneButtonLabel.setText("Phone", NotificationType::dontSendNotification);
     phoneButtonLabel.setJustificationType(Justification::horizontallyCentred);
@@ -46,6 +50,10 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     addAndMakeVisible(tvButtonLabel);
     tvButtonLabel.setText("Television", NotificationType::dontSendNotification);
     tvButtonLabel.setJustificationType(Justification::horizontallyCentred);
+    
+    addAndMakeVisible(bluetoothButtonLabel);
+    bluetoothButtonLabel.setText("Bluetooth Speaker", NotificationType::dontSendNotification);
+    bluetoothButtonLabel.setJustificationType(Justification::horizontallyCentred);
     
     addAndMakeVisible(deviceTypeBox);
     auto currentCategory = processor.categoryParam->getIndex();
@@ -72,6 +80,13 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
             
             deviceTypeBox.setSelectedId(processor.tvTypeParam->getIndex() + 1);
             break;
+        case 3:
+            bluetoothButton.setToggleState(true, NotificationType::dontSendNotification);
+            for (auto choice:processor.bluetoothTypeParam->choices)
+                deviceTypeBox.addItem(choice, i++);
+            
+            deviceTypeBox.setSelectedId(processor.bluetoothTypeParam->getIndex() + 1);
+            break;
         default:
             phoneButton.setToggleState(true, NotificationType::dontSendNotification);
             for (auto choice:processor.phoneTypeParam->choices)
@@ -90,7 +105,7 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     deviceTypeLabel.attachToComponent(&deviceTypeBox, true);
     
     addAndMakeVisible(otherButton);
-    otherButton.setButtonText("Other IR");
+    otherButton.setButtonText("Other IR$");
     otherButton.addListener(this);
     
     addAndMakeVisible(otherIRLabel);
@@ -103,7 +118,7 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     outputVolumeLabel.setJustificationType(Justification::centredLeft);
     outputVolumeLabel.attachToComponent(outputVolumeSlider, true);
     
-    setSize (400, 300);
+    setSize (500, 350);
 }
 
 DeviceSimulationPluginAudioProcessorEditor::~DeviceSimulationPluginAudioProcessorEditor()
@@ -120,6 +135,9 @@ void DeviceSimulationPluginAudioProcessorEditor::comboBoxChanged(ComboBox* box) 
             break;
         case 2:
             processor.tvTypeParam->operator=(box->getSelectedItemIndex());
+            break;
+        case 3:
+            processor.bluetoothTypeParam->operator=(box->getSelectedItemIndex());
             break;
         default:
             processor.phoneTypeParam->operator=(box->getSelectedItemIndex());
@@ -175,6 +193,16 @@ void DeviceSimulationPluginAudioProcessorEditor::buttonClicked(Button* button) {
             processor.categoryParam->operator=(2);
             deviceTypeBox.setSelectedId(processor.tvTypeParam->getIndex() + 1);
         }
+        else if (button == &bluetoothButton) {
+            deviceCategory = 3;
+            auto i = 1;
+            deviceTypeBox.clear();
+            for (auto choice:processor.bluetoothTypeParam->choices)
+                deviceTypeBox.addItem(choice, i++);
+            
+            processor.categoryParam->operator=(3);
+            deviceTypeBox.setSelectedId(processor.bluetoothTypeParam->getIndex() + 1);
+        }
     }
 }
 
@@ -195,22 +223,25 @@ void DeviceSimulationPluginAudioProcessorEditor::resized()
     
     auto buttonBounds = bounds.removeFromTop(80).reduced(10);
     auto buttonLabelBounds = buttonBounds.removeFromTop(30);
-    phoneButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 3));
-    laptopButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 2));
-    tvButtonLabel.setBounds(buttonLabelBounds);
+    phoneButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 4));
+    laptopButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 3));
+    tvButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 2));
+    bluetoothButtonLabel.setBounds(buttonLabelBounds);
     
     const int buttonSize = 14;
-    const int inset = (buttonBounds.getWidth() / 6) + buttonSize;
-    phoneButton.setBounds(buttonBounds.removeFromLeft(buttonBounds.getWidth() / 3));
+    const int inset = (buttonBounds.getWidth() / 8) + buttonSize;
+    phoneButton.setBounds(buttonBounds.removeFromLeft(buttonBounds.getWidth() / 4));
     phoneButton.setBounds(phoneButton.getBounds().removeFromRight(inset));
-    laptopButton.setBounds(buttonBounds.removeFromLeft(buttonBounds.getWidth() / 2));
+    laptopButton.setBounds(buttonBounds.removeFromLeft(buttonBounds.getWidth() / 3));
     laptopButton.setBounds(laptopButton.getBounds().removeFromRight(inset));
-    tvButton.setBounds(buttonBounds);
+    tvButton.setBounds(buttonBounds.removeFromLeft(buttonBounds.getWidth() / 2));
     tvButton.setBounds(tvButton.getBounds().removeFromRight(inset));
+    bluetoothButton.setBounds(buttonBounds);
+    bluetoothButton.setBounds(bluetoothButton.getBounds().removeFromRight(inset));
     
     auto typeBoxBounds = bounds.removeFromTop(40);
-    typeBoxBounds.removeFromLeft(30);
-    typeBoxBounds.removeFromRight(30);
+    typeBoxBounds.removeFromLeft(40);
+    typeBoxBounds.removeFromRight(40);
     deviceTypeBox.setBounds(typeBoxBounds);
     bounds.removeFromTop(15);
     

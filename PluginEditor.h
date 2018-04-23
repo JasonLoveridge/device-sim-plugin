@@ -78,11 +78,11 @@ private:
     
     DeviceSimulationPluginAudioProcessor& processor;
     Label outputVolumeLabel, deviceTypeLabel, otherIRLabel, titleLabel;
-    Label phoneButtonLabel, laptopButtonLabel, tvButtonLabel;
+    Label phoneButtonLabel, laptopButtonLabel, tvButtonLabel, bluetoothButtonLabel;
     ScopedPointer<ParameterSlider> outputVolumeSlider;
     ComboBox deviceTypeBox;
     TextButton otherButton;
-    ToggleButton phoneButton, laptopButton, tvButton;
+    ToggleButton phoneButton, laptopButton, tvButton, bluetoothButton;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DeviceSimulationPluginAudioProcessorEditor)
 };

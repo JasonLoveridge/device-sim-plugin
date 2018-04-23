@@ -58,11 +58,17 @@ public:
     
     void updateParameters();
     
+    void changePhone(size_t maxSize, bool categoryChanged);
+    void changeLaptop(size_t maxSize, bool categoryChanged);
+    void changeTelevision(size_t maxSize, bool categoryChanged);
+    void changeBluetooth(size_t maxSize, bool categoryChanged);
+    
     AudioParameterFloat* outputVolumeParam;
     AudioParameterChoice* categoryParam;
     AudioParameterChoice* phoneTypeParam;
     AudioParameterChoice* laptopTypeParam;
     AudioParameterChoice* tvTypeParam;
+    AudioParameterChoice* bluetoothTypeParam;
     
     File otherIRFile;
     File llIR, lrIR, rlIR, rrIR;
@@ -74,7 +80,11 @@ private:
     dsp::Convolution convLL, convLR, convRL, convRR;
     dsp::Gain<float> outputVolume;
     
-    Atomic<int> deviceType;
+    Atomic<int> category;
+    Atomic<int> phoneType;
+    Atomic<int> laptopType;
+    Atomic<int> tvType;
+    Atomic<int> bluetoothType;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DeviceSimulationPluginAudioProcessor)
 };
