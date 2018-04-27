@@ -56,6 +56,8 @@ public:
     static const int tvcropped_pngSize;
     static const char* macBookCropped2_png;
     static const int macBookCropped2_pngSize;
+    static const char* genelec6010_png;
+    static const int genelec6010_pngSize;
 
 
 private:

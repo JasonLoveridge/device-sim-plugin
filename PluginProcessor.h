@@ -61,14 +61,14 @@ public:
     void changePhone(size_t maxSize, bool categoryChanged);
     void changeLaptop(size_t maxSize, bool categoryChanged);
     void changeTelevision(size_t maxSize, bool categoryChanged);
-    void changeBluetooth(size_t maxSize, bool categoryChanged);
+    void changeSpeaker(size_t maxSize, bool categoryChanged);
     
     AudioParameterFloat* outputVolumeParam;
     AudioParameterChoice* categoryParam;
     AudioParameterChoice* phoneTypeParam;
     AudioParameterChoice* laptopTypeParam;
     AudioParameterChoice* tvTypeParam;
-    AudioParameterChoice* bluetoothTypeParam;
+    AudioParameterChoice* speakerTypeParam;
     
     File otherIRFile;
     File llIR, lrIR, rlIR, rrIR;
@@ -84,7 +84,7 @@ private:
     Atomic<int> phoneType;
     Atomic<int> laptopType;
     Atomic<int> tvType;
-    Atomic<int> bluetoothType;
+    Atomic<int> speakerType;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DeviceSimulationPluginAudioProcessor)
 };

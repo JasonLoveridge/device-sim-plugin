@@ -1,9 +1,12 @@
 /*
  ==============================================================================
  
- This file was auto-generated!
+ Device Simulation Plugin - Editor.cpp
+ Author: Jason Loveridge
+ Date: 05/2018
+ BBC Research & Development
  
- It contains the basic framework code for a JUCE plugin editor.
+ Built upon JUCE plugin framework
  
  ==============================================================================
  */
@@ -17,15 +20,14 @@ DeviceSimulationPluginAudioProcessorEditor::DeviceSimulationPluginAudioProcessor
 : AudioProcessorEditor (&p), processor (p),
 outputVolumeLabel({}, processor.outputVolumeParam->name)
 {
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
+    //Add and initialise labels and radio button components
     addAndMakeVisible(titleLabel);
-    titleLabel.setText("Device Simulator.", NotificationType::dontSendNotification);
+    titleLabel.setText("Device Simulator", NotificationType::dontSendNotification);
     titleLabel.setJustificationType(Justification::horizontallyCentred);
     titleLabel.setFont(25.0f);
     
     addAndMakeVisible(phoneButton);
-    phoneButton.setRadioGroupId(1);
+    phoneButton.setRadioGroupId(6);
     phoneButton.addListener(this);
     
     addAndMakeVisible(laptopButton);
@@ -36,9 +38,9 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     tvButton.setRadioGroupId(phoneButton.getRadioGroupId());
     tvButton.addListener(this);
     
-    addAndMakeVisible(bluetoothButton);
-    bluetoothButton.setRadioGroupId(phoneButton.getRadioGroupId());
-    bluetoothButton.addListener(this);
+    addAndMakeVisible(speakerButton);
+    speakerButton.setRadioGroupId(phoneButton.getRadioGroupId());
+    speakerButton.addListener(this);
     
     addAndMakeVisible(phoneButtonLabel);
     phoneButtonLabel.setText("Phone", NotificationType::dontSendNotification);
@@ -52,66 +54,22 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     tvButtonLabel.setText("Television", NotificationType::dontSendNotification);
     tvButtonLabel.setJustificationType(Justification::horizontallyCentred);
     
-    addAndMakeVisible(bluetoothButtonLabel);
-    bluetoothButtonLabel.setText("Bluetooth Speaker", NotificationType::dontSendNotification);
-    bluetoothButtonLabel.setJustificationType(Justification::horizontallyCentred);
+    addAndMakeVisible(speakerButtonLabel);
+    speakerButtonLabel.setText("Other Speaker", NotificationType::dontSendNotification);
+    speakerButtonLabel.setJustificationType(Justification::horizontallyCentred);
     
+    // Fill dropdown menu with device choices from relevant category
     addAndMakeVisible(deviceTypeBox);
-    auto currentCategory = processor.categoryParam->getIndex();
-    auto i = 1;
-    switch (currentCategory) {
-        case 0:
-            phoneButton.setToggleState(true, NotificationType::dontSendNotification);
-            for (auto choice:processor.phoneTypeParam->choices)
-                deviceTypeBox.addItem(choice, i++);
-            
-            deviceTypeBox.setSelectedId(processor.phoneTypeParam->getIndex() + 1);
-            break;
-        case 1:
-            laptopButton.setToggleState(true, NotificationType::dontSendNotification);
-            for (auto choice:processor.laptopTypeParam->choices)
-                deviceTypeBox.addItem(choice, i++);
-            
-            deviceTypeBox.setSelectedId(processor.laptopTypeParam->getIndex() + 1);
-            break;
-        case 2:
-            tvButton.setToggleState(true, NotificationType::dontSendNotification);
-            for (auto choice:processor.tvTypeParam->choices)
-                deviceTypeBox.addItem(choice, i++);
-            
-            deviceTypeBox.setSelectedId(processor.tvTypeParam->getIndex() + 1);
-            break;
-        case 3:
-            bluetoothButton.setToggleState(true, NotificationType::dontSendNotification);
-            for (auto choice:processor.bluetoothTypeParam->choices)
-                deviceTypeBox.addItem(choice, i++);
-            
-            deviceTypeBox.setSelectedId(processor.bluetoothTypeParam->getIndex() + 1);
-            break;
-        default:
-            phoneButton.setToggleState(true, NotificationType::dontSendNotification);
-            for (auto choice:processor.phoneTypeParam->choices)
-                deviceTypeBox.addItem(choice, i++);
-            
-            deviceTypeBox.setSelectedId(processor.phoneTypeParam->getIndex() + 1);
-            break;
-    }
+    fillDeviceTypeBox(processor.categoryParam->getIndex());
+
     
+    // Add drop down menu, label and also output volume control and label
     deviceTypeBox.addListener(this);
     deviceTypeBox.setJustificationType(Justification::horizontallyCentred);
-    
     
     addAndMakeVisible(deviceTypeLabel);
     deviceTypeLabel.setJustificationType(Justification::centredLeft);
     deviceTypeLabel.attachToComponent(&deviceTypeBox, true);
-    
-    addAndMakeVisible(otherButton);
-    otherButton.setButtonText("Other IR");
-    otherButton.addListener(this);
-    
-    addAndMakeVisible(otherIRLabel);
-    otherIRLabel.setJustificationType(Justification::horizontallyCentred);
-    otherIRLabel.setText("No other IR selected", NotificationType::dontSendNotification);
     
     addAndMakeVisible(outputVolumeSlider = new ParameterSlider(*processor.outputVolumeParam));
     
@@ -119,10 +77,8 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     outputVolumeLabel.setJustificationType(Justification::centredLeft);
     outputVolumeLabel.attachToComponent(outputVolumeSlider, true);
     
+    // Initialise device image to iPhone
     deviceImage = ImageCache::getFromMemory(Images::iPhoneCropped_png, Images::iPhoneCropped_pngSize);
-    
-    //DeviceSimulationPluginAudioProcessorEditor::setResizable(true, true);
-    //DeviceSimulationPluginAudioProcessorEditor::setResizeLimits(300, 210, 1000, 700);
     
     setSize (500, 450);
 }
@@ -131,86 +87,93 @@ DeviceSimulationPluginAudioProcessorEditor::~DeviceSimulationPluginAudioProcesso
 {
 }
 
+// If the combo box is changed, change to the corresponding device in the processor
 void DeviceSimulationPluginAudioProcessorEditor::comboBoxChanged(ComboBox* box) {
-    switch(deviceCategory) {
-        case 0:
+    switch(processor.categoryParam->getIndex()) {
+        case phone:
             processor.phoneTypeParam->operator=(box->getSelectedItemIndex());
             break;
-        case 1:
+        case laptop:
             processor.laptopTypeParam->operator=(box->getSelectedItemIndex());
             break;
-        case 2:
+        case television:
             processor.tvTypeParam->operator=(box->getSelectedItemIndex());
             break;
-        case 3:
-            processor.bluetoothTypeParam->operator=(box->getSelectedItemIndex());
+        case speaker:
+            processor.speakerTypeParam->operator=(box->getSelectedItemIndex());            
             break;
         default:
             processor.phoneTypeParam->operator=(box->getSelectedItemIndex());
             break;
     }
-    if (otherIRLabel.getText().contains("Using:")) {
-        otherIRLabel.setText("Using IR from drop down menu", NotificationType::dontSendNotification);
-    }
+
+    // Repaint GUI so that device image is updated
+    DeviceSimulationPluginAudioProcessorEditor::repaint();
 }
 
 void DeviceSimulationPluginAudioProcessorEditor::buttonClicked(Button* button) {
-    
-    if (button == &otherButton) {
-        FileChooser chooser("Select folder containing impulse responses", File::nonexistent, "*.wav");
-        if (chooser.browseForDirectory()) {
-            File folder (chooser.getResult());
-            processor.llIR = folder.getChildFile("LLIR-T.wav");
-            processor.lrIR = folder.getChildFile("LRIR-T.wav");
-            processor.rlIR = folder.getChildFile("RLIR-T.wav");
-            processor.rrIR = folder.getChildFile("RRIR-T.wav");
-            processor.fileChanged = true;
-            otherIRLabel.setText("Using: " + folder.getFileName(), NotificationType::dontSendNotification);
-        }
+    if (button == &phoneButton) {
+        fillDeviceTypeBox(phone);
     }
-    else {
-        if (button == &phoneButton) {
-            deviceCategory = 0;
-            auto i = 1;
-            deviceTypeBox.clear();
-            for (auto choice:processor.phoneTypeParam->choices)
+    else if (button == &laptopButton) {
+        fillDeviceTypeBox(laptop);
+    }
+    else if (button == &tvButton) {
+        fillDeviceTypeBox(television);
+    }
+    else if (button == &speakerButton) {
+        fillDeviceTypeBox(speaker);
+    }
+    DeviceSimulationPluginAudioProcessorEditor::repaint();
+}
+
+// Change the combo box options according to the category that has been selected
+void DeviceSimulationPluginAudioProcessorEditor::fillDeviceTypeBox(int category) {
+    deviceTypeBox.clear();
+    auto i = 1;
+    switch (category) {
+        case phone:
+            //phoneButton.setToggleState(true, NotificationType::dontSendNotification);
+            for (auto choice:processor.phoneTypeParam->choices) {
                 deviceTypeBox.addItem(choice, i++);
+            }
             
-            processor.categoryParam->operator=(0);
             deviceTypeBox.setSelectedId(processor.phoneTypeParam->getIndex() + 1);
-        }
-        else if (button == &laptopButton) {
-            deviceCategory = 1;
-            auto i = 1;
-            deviceTypeBox.clear();
-            for (auto choice:processor.laptopTypeParam->choices)
+            break;
+        case laptop:
+            //laptopButton.setToggleState(true, NotificationType::dontSendNotification);
+            for (auto choice:processor.laptopTypeParam->choices) {
                 deviceTypeBox.addItem(choice, i++);
+            }
             
-            processor.categoryParam->operator=(1);
             deviceTypeBox.setSelectedId(processor.laptopTypeParam->getIndex() + 1);
-        }
-        else if (button == &tvButton) {
-            deviceCategory = 2;
-            auto i = 1;
-            deviceTypeBox.clear();
-            for (auto choice:processor.tvTypeParam->choices)
+            break;
+        case television:
+            //tvButton.setToggleState(true, NotificationType::dontSendNotification);
+            for (auto choice:processor.tvTypeParam->choices) {
                 deviceTypeBox.addItem(choice, i++);
+            }
             
-            processor.categoryParam->operator=(2);
             deviceTypeBox.setSelectedId(processor.tvTypeParam->getIndex() + 1);
-        }
-        else if (button == &bluetoothButton) {
-            deviceCategory = 3;
-            auto i = 1;
-            deviceTypeBox.clear();
-            for (auto choice:processor.bluetoothTypeParam->choices)
+            break;
+        case speaker:
+            //speakerButton.setToggleState(true, NotificationType::dontSendNotification);
+            for (auto choice:processor.speakerTypeParam->choices) {
                 deviceTypeBox.addItem(choice, i++);
+            }
             
-            processor.categoryParam->operator=(3);
-            deviceTypeBox.setSelectedId(processor.bluetoothTypeParam->getIndex() + 1);
-        }
-        DeviceSimulationPluginAudioProcessorEditor::repaint();
+            deviceTypeBox.setSelectedId(processor.speakerTypeParam->getIndex() + 1);
+            break;
+        default:
+            //phoneButton.setToggleState(true, NotificationType::dontSendNotification);
+            for (auto choice:processor.phoneTypeParam->choices) {
+                deviceTypeBox.addItem(choice, i++);
+            }
+            
+            deviceTypeBox.setSelectedId(processor.phoneTypeParam->getIndex() + 1);
+            break;
     }
+    processor.categoryParam->operator=(category);
 }
 
 //==============================================================================
@@ -219,23 +182,32 @@ void DeviceSimulationPluginAudioProcessorEditor::paint (Graphics& g)
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
     switch(processor.categoryParam->getIndex()) {
-        case 0:
+        case phone:
             //https://mockuphone.com/iphone7plusgold
             deviceImage = ImageCache::getFromMemory(Images::iPhoneCropped_png, Images::iPhoneCropped_pngSize);
             g.drawImage(deviceImage, 125, 120, 250, 250, 0, 0, 750, 750);
             break;
-        case 1:
+        case laptop:
+            //https://www.ifixit.com/Device/MacBook_Pro_13%22_Retina_Display_Early_2013
             deviceImage = ImageCache::getFromMemory(Images::macBookCropped2_png, Images::macBookCropped2_pngSize);
             g.drawImage(deviceImage, 140, 175, 200, 200, 0, 0, 561, 562);
             break;
-        case 2:
+        case television:
+            //https://www.cnet.com/uk/products/panasonic-tx-l47e5b/review/
             deviceImage = ImageCache::getFromMemory(Images::tvcropped_png, Images::tvcropped_pngSize);
             g.drawImage(deviceImage, 135, 180, 239, 156, 0, 0, 716, 468);
             break;
-        case 3:
-            //https://www.davistv.co.uk/sony-srsx11-portable-bluetooth-loudspeaker-black-3901-p.asp
-            deviceImage = ImageCache::getFromMemory(Images::cubeCropped_png, Images::cubeCropped_pngSize);
-            g.drawImage(deviceImage, 180, 200, 150, 152, 0, 0, 341, 348);
+        case speaker:
+            if (processor.speakerTypeParam->getIndex() == SRSX11) {
+                //https://www.davistv.co.uk/sony-srsx11-portable-speaker-loudspeaker-black-3901-p.asp
+                deviceImage = ImageCache::getFromMemory(Images::cubeCropped_png, Images::cubeCropped_pngSize);
+                g.drawImage(deviceImage, 180, 200, 150, 152, 0, 0, 341, 348);
+            }
+            else if (processor.speakerTypeParam->getIndex() == Genelec6010Pair) {
+                //https://www.genelec.com/support-technology/previous-models/6010a-studio-monitor
+                deviceImage = ImageCache::getFromMemory(Images::genelec6010_png, Images::genelec6010_pngSize);
+                g.drawImage(deviceImage, 155, 200, 200, 140, 0, 0, 800, 560);
+            }
             break;
         default:
             deviceImage = ImageCache::getFromMemory(Images::iPhoneCropped_png, Images::iPhoneCropped_pngSize);
@@ -258,7 +230,7 @@ void DeviceSimulationPluginAudioProcessorEditor::resized()
     phoneButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 4));
     laptopButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 3));
     tvButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 2));
-    bluetoothButtonLabel.setBounds(buttonLabelBounds);
+    speakerButtonLabel.setBounds(buttonLabelBounds);
     
     const int buttonSize = 14;
     const int inset = (buttonBounds.getWidth() / 8) + buttonSize;
@@ -268,8 +240,8 @@ void DeviceSimulationPluginAudioProcessorEditor::resized()
     laptopButton.setBounds(laptopButton.getBounds().removeFromRight(inset));
     tvButton.setBounds(buttonBounds.removeFromLeft(buttonBounds.getWidth() / 2));
     tvButton.setBounds(tvButton.getBounds().removeFromRight(inset));
-    bluetoothButton.setBounds(buttonBounds);
-    bluetoothButton.setBounds(bluetoothButton.getBounds().removeFromRight(inset));
+    speakerButton.setBounds(buttonBounds);
+    speakerButton.setBounds(speakerButton.getBounds().removeFromRight(inset));
     
     auto typeBoxBounds = bounds.removeFromTop(40);
     typeBoxBounds.removeFromLeft(40);

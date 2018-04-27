@@ -26,11 +26,11 @@ DeviceSimulationPluginAudioProcessor::DeviceSimulationPluginAudioProcessor()
 #endif
 {
     addParameter(outputVolumeParam = new AudioParameterFloat("OUTPUT", "Output Volume", {-40.f, 40.f, 0.f, 1.0f}, 0.f, "dB"));
-    addParameter(categoryParam = new AudioParameterChoice("CATEGORY", "Device Category", {"Phone", "Laptop", "Television", "Bluetooth Speaker"}, 0));
+    addParameter(categoryParam = new AudioParameterChoice("CATEGORY", "Device Category", {"Phone", "Laptop", "Television", "speaker Speaker"}, 0));
     addParameter(phoneTypeParam = new AudioParameterChoice("PHONETYPE", "Phone Type", {"iPhone 7 Plus"}, 0));
     addParameter(laptopTypeParam = new AudioParameterChoice("LAPTOPTYPE", "Laptop Type", {"MacBook Pro (2013)"}, 0));
     addParameter(tvTypeParam = new AudioParameterChoice("TVTYPE", "TV Type", {"Panasonic TX-L47ET5B"}, 0));
-    addParameter(bluetoothTypeParam = new AudioParameterChoice("BLUETOOTHTYPE", "Bluetooth Speaker Type", {"Sony SRSX11", "Genelec 6010A (Pair)"}, 0));
+    addParameter(speakerTypeParam = new AudioParameterChoice("SPEAKERTYPE", "Other Speaker Type", {"Sony SRSX11", "Genelec 6010A (Pair)"}, 0));
 }
 
 DeviceSimulationPluginAudioProcessor::~DeviceSimulationPluginAudioProcessor()
@@ -113,7 +113,7 @@ void DeviceSimulationPluginAudioProcessor::prepareToPlay (double sampleRate, int
     convRL.prepare(spec);
     convRR.prepare(spec);
     outputVolume.prepare(spec);
-    auto maxSize = static_cast<size_t> (roundToInt (getSampleRate() * (8192.0 / 44100.0)));
+    //auto maxSize = static_cast<size_t> (roundToInt (getSampleRate() * (8192.0 / 44100.0)));
     //convolution.loadImpulseResponse(BinaryData::iPhoneIR_wav, BinaryData::iPhoneIR_wavSize, false, true, maxSize);
 //    convLL.loadImpulseResponse(BinaryData::iPhone7PLL_wav, BinaryData::iPhone7PLL_wavSize, false, false, maxSize, false);
 //    convLR.loadImpulseResponse(BinaryData::iPhone7PLR_wav, BinaryData::iPhone7PLR_wavSize, false, false, maxSize, false);
@@ -219,24 +219,24 @@ void DeviceSimulationPluginAudioProcessor::updateParameters() {
     if (newCategory != currentCategory) {
         categoryChanged = true;
         category.set(newCategory);
-        
-        switch(newCategory) {
-            case 0:
-                changePhone(maxSize, categoryChanged);
-                break;
-            case 1:
-                changeLaptop(maxSize, categoryChanged);
-                break;
-            case 2:
-                changeTelevision(maxSize, categoryChanged);
-                break;
-            case 3:
-                changeBluetooth(maxSize, categoryChanged);
-                break;
-            default:
-                changePhone(maxSize, categoryChanged);
-                break;
-        }
+    }
+    
+    switch(newCategory) {
+        case 0:
+            changePhone(maxSize, categoryChanged);
+            break;
+        case 1:
+            changeLaptop(maxSize, categoryChanged);
+            break;
+        case 2:
+            changeTelevision(maxSize, categoryChanged);
+            break;
+        case 3:
+            changeSpeaker(maxSize, categoryChanged);
+            break;
+        default:
+            changePhone(maxSize, categoryChanged);
+            break;
     }
     
     if (fileChanged) {
@@ -251,123 +251,95 @@ void DeviceSimulationPluginAudioProcessor::updateParameters() {
 }
 
 void DeviceSimulationPluginAudioProcessor::changePhone(size_t maxSize, bool categoryChanged) {
-    if (categoryChanged) {
-        convLL.loadImpulseResponse(BinaryData::iPhone7PLL_wav, BinaryData::iPhone7PLL_wavSize, false, false, maxSize, false);
-        convLR.loadImpulseResponse(BinaryData::iPhone7PLR_wav, BinaryData::iPhone7PLR_wavSize, false, false, maxSize, false);
-        convRL.loadImpulseResponse(BinaryData::iPhone7PRL_wav, BinaryData::iPhone7PRL_wavSize, false, false, maxSize, false);
-        convRR.loadImpulseResponse(BinaryData::iPhone7PRR_wav, BinaryData::iPhone7PRR_wavSize, false, false, maxSize, false);
-    }
-    else {
-        auto newPhone = phoneTypeParam->getIndex();
-        auto currentPhone = phoneType.get();
-        if (newPhone != currentPhone) {
-            switch(newPhone) {
-                case 0:
-                    convLL.loadImpulseResponse(BinaryData::iPhone7PLL_wav, BinaryData::iPhone7PLL_wavSize, false, false, maxSize, false);
-                    convLR.loadImpulseResponse(BinaryData::iPhone7PLR_wav, BinaryData::iPhone7PLR_wavSize, false, false, maxSize, false);
-                    convRL.loadImpulseResponse(BinaryData::iPhone7PRL_wav, BinaryData::iPhone7PRL_wavSize, false, false, maxSize, false);
-                    convRR.loadImpulseResponse(BinaryData::iPhone7PRR_wav, BinaryData::iPhone7PRR_wavSize, false, false, maxSize, false);
-                    break;
-                default:
-                    convLL.loadImpulseResponse(BinaryData::iPhone7PLL_wav, BinaryData::iPhone7PLL_wavSize, false, false, maxSize, false);
-                    convLR.loadImpulseResponse(BinaryData::iPhone7PLR_wav, BinaryData::iPhone7PLR_wavSize, false, false, maxSize, false);
-                    convRL.loadImpulseResponse(BinaryData::iPhone7PRL_wav, BinaryData::iPhone7PRL_wavSize, false, false, maxSize, false);
-                    convRR.loadImpulseResponse(BinaryData::iPhone7PRR_wav, BinaryData::iPhone7PRR_wavSize, false, false, maxSize, false);
-                    break;
-            }
+    auto newPhone = phoneTypeParam->getIndex();
+    auto currentPhone = phoneType.get();
+    if (newPhone != currentPhone || categoryChanged) {
+        phoneType.set(newPhone);
+        switch(newPhone) {
+            case 0:
+                convLL.loadImpulseResponse(BinaryData::iPhone7PLL_wav, BinaryData::iPhone7PLL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::iPhone7PLR_wav, BinaryData::iPhone7PLR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::iPhone7PRL_wav, BinaryData::iPhone7PRL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::iPhone7PRR_wav, BinaryData::iPhone7PRR_wavSize, false, false, maxSize, false);
+                break;
+            default:
+                convLL.loadImpulseResponse(BinaryData::iPhone7PLL_wav, BinaryData::iPhone7PLL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::iPhone7PLR_wav, BinaryData::iPhone7PLR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::iPhone7PRL_wav, BinaryData::iPhone7PRL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::iPhone7PRR_wav, BinaryData::iPhone7PRR_wavSize, false, false, maxSize, false);
+                break;
         }
     }
 }
 
 void DeviceSimulationPluginAudioProcessor::changeLaptop(size_t maxSize, bool categoryChanged) {
-    if (categoryChanged) {
-        convLL.loadImpulseResponse(BinaryData::MacBookProLL_wav, BinaryData::MacBookProLL_wavSize, false, false, maxSize, false);
-        convLR.loadImpulseResponse(BinaryData::MacBookProLR_wav, BinaryData::MacBookProLR_wavSize, false, false, maxSize, false);
-        convRL.loadImpulseResponse(BinaryData::MacBookProRL_wav, BinaryData::MacBookProRL_wavSize, false, false, maxSize, false);
-        convRR.loadImpulseResponse(BinaryData::MacBookProRR_wav, BinaryData::MacBookProRR_wavSize, false, false, maxSize, false);
-    }
-    else {
-        auto newLaptop = laptopTypeParam->getIndex();
-        auto currentLaptop = laptopType.get();
-        if (newLaptop != currentLaptop) {
-            switch(newLaptop) {
-                case 0:
-                    convLL.loadImpulseResponse(BinaryData::MacBookProLL_wav, BinaryData::MacBookProLL_wavSize, false, false, maxSize, false);
-                    convLR.loadImpulseResponse(BinaryData::MacBookProLR_wav, BinaryData::MacBookProLR_wavSize, false, false, maxSize, false);
-                    convRL.loadImpulseResponse(BinaryData::MacBookProRL_wav, BinaryData::MacBookProRL_wavSize, false, false, maxSize, false);
-                    convRR.loadImpulseResponse(BinaryData::MacBookProRR_wav, BinaryData::MacBookProRR_wavSize, false, false, maxSize, false);
-                    break;
-                default:
-                    convLL.loadImpulseResponse(BinaryData::MacBookProLL_wav, BinaryData::MacBookProLL_wavSize, false, false, maxSize, false);
-                    convLR.loadImpulseResponse(BinaryData::MacBookProLR_wav, BinaryData::MacBookProLR_wavSize, false, false, maxSize, false);
-                    convRL.loadImpulseResponse(BinaryData::MacBookProRL_wav, BinaryData::MacBookProRL_wavSize, false, false, maxSize, false);
-                    convRR.loadImpulseResponse(BinaryData::MacBookProRR_wav, BinaryData::MacBookProRR_wavSize, false, false, maxSize, false);
-                    break;
-            }
+    auto newLaptop = laptopTypeParam->getIndex();
+    auto currentLaptop = laptopType.get();
+    if (newLaptop != currentLaptop || categoryChanged) {
+        laptopType.set(newLaptop);
+        switch(newLaptop) {
+            case 0:
+                convLL.loadImpulseResponse(BinaryData::MacBookProLL_wav, BinaryData::MacBookProLL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::MacBookProLR_wav, BinaryData::MacBookProLR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::MacBookProRL_wav, BinaryData::MacBookProRL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::MacBookProRR_wav, BinaryData::MacBookProRR_wavSize, false, false, maxSize, false);
+                break;
+            default:
+                convLL.loadImpulseResponse(BinaryData::MacBookProLL_wav, BinaryData::MacBookProLL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::MacBookProLR_wav, BinaryData::MacBookProLR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::MacBookProRL_wav, BinaryData::MacBookProRL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::MacBookProRR_wav, BinaryData::MacBookProRR_wavSize, false, false, maxSize, false);
+                break;
         }
     }
 }
 
 void DeviceSimulationPluginAudioProcessor::changeTelevision(size_t maxSize, bool categoryChanged) {
-    if (categoryChanged) {
-        convLL.loadImpulseResponse(BinaryData::PanaTVLL_wav, BinaryData::PanaTVLL_wavSize, false, false, maxSize, false);
-        convLR.loadImpulseResponse(BinaryData::PanaTVLR_wav, BinaryData::PanaTVLR_wavSize, false, false, maxSize, false);
-        convRL.loadImpulseResponse(BinaryData::PanaTVRL_wav, BinaryData::PanaTVRL_wavSize, false, false, maxSize, false);
-        convRR.loadImpulseResponse(BinaryData::PanaTVRR_wav, BinaryData::PanaTVRR_wavSize, false, false, maxSize, false);
-    }
-    else {
-        auto newTV = tvTypeParam->getIndex();
-        auto currentTV = tvType.get();
-        if (newTV != currentTV) {
-            switch(newTV) {
-                case 0:
-                    convLL.loadImpulseResponse(BinaryData::PanaTVLL_wav, BinaryData::PanaTVLL_wavSize, false, false, maxSize, false);
-                    convLR.loadImpulseResponse(BinaryData::PanaTVLR_wav, BinaryData::PanaTVLR_wavSize, false, false, maxSize, false);
-                    convRL.loadImpulseResponse(BinaryData::PanaTVRL_wav, BinaryData::PanaTVRL_wavSize, false, false, maxSize, false);
-                    convRR.loadImpulseResponse(BinaryData::PanaTVRR_wav, BinaryData::PanaTVRR_wavSize, false, false, maxSize, false);
-                    break;
-                default:
-                    convLL.loadImpulseResponse(BinaryData::PanaTVLL_wav, BinaryData::PanaTVLL_wavSize, false, false, maxSize, false);
-                    convLR.loadImpulseResponse(BinaryData::PanaTVLR_wav, BinaryData::PanaTVLR_wavSize, false, false, maxSize, false);
-                    convRL.loadImpulseResponse(BinaryData::PanaTVRL_wav, BinaryData::PanaTVRL_wavSize, false, false, maxSize, false);
-                    convRR.loadImpulseResponse(BinaryData::PanaTVRR_wav, BinaryData::PanaTVRR_wavSize, false, false, maxSize, false);
-                    break;
-            }
+    auto newTV = tvTypeParam->getIndex();
+    auto currentTV = tvType.get();
+    if (newTV != currentTV || categoryChanged) {
+        tvType.set(newTV);
+        switch(newTV) {
+            case 0:
+                convLL.loadImpulseResponse(BinaryData::PanaTVLL_wav, BinaryData::PanaTVLL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::PanaTVLR_wav, BinaryData::PanaTVLR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::PanaTVRL_wav, BinaryData::PanaTVRL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::PanaTVRR_wav, BinaryData::PanaTVRR_wavSize, false, false, maxSize, false);
+                break;
+            default:
+                convLL.loadImpulseResponse(BinaryData::PanaTVLL_wav, BinaryData::PanaTVLL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::PanaTVLR_wav, BinaryData::PanaTVLR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::PanaTVRL_wav, BinaryData::PanaTVRL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::PanaTVRR_wav, BinaryData::PanaTVRR_wavSize, false, false, maxSize, false);
+                break;
         }
     }
 }
 
-void DeviceSimulationPluginAudioProcessor::changeBluetooth(size_t maxSize, bool categoryChanged) {
-    if (categoryChanged) {
-        convLL.loadImpulseResponse(BinaryData::SRSX11LL_wav, BinaryData::SRSX11LL_wavSize, false, false, maxSize, false);
-        convLR.loadImpulseResponse(BinaryData::SRSX11LR_wav, BinaryData::SRSX11LR_wavSize, false, false, maxSize, false);
-        convRL.loadImpulseResponse(BinaryData::SRSX11RL_wav, BinaryData::SRSX11RL_wavSize, false, false, maxSize, false);
-        convRR.loadImpulseResponse(BinaryData::SRSX11RR_wav, BinaryData::SRSX11RR_wavSize, false, false, maxSize, false);
-    }
-    else {
-        auto newBluetooth = bluetoothTypeParam->getIndex();
-        auto currentBluetooth = bluetoothType.get();
-        if (newBluetooth != currentBluetooth) {
-            switch(newBluetooth) {
-                case 0:
-                    convLL.loadImpulseResponse(BinaryData::SRSX11LL_wav, BinaryData::SRSX11LL_wavSize, false, false, maxSize, false);
-                    convLR.loadImpulseResponse(BinaryData::SRSX11LR_wav, BinaryData::SRSX11LR_wavSize, false, false, maxSize, false);
-                    convRL.loadImpulseResponse(BinaryData::SRSX11RL_wav, BinaryData::SRSX11RL_wavSize, false, false, maxSize, false);
-                    convRR.loadImpulseResponse(BinaryData::SRSX11RR_wav, BinaryData::SRSX11RR_wavSize, false, false, maxSize, false);
-                    break;
-                case 1:
-                    convLL.loadImpulseResponse(BinaryData::GenelecLL_wav, BinaryData::GenelecLL_wavSize, false, false, maxSize, false);
-                    convLR.loadImpulseResponse(BinaryData::GenelecLR_wav, BinaryData::GenelecLR_wavSize, false, false, maxSize, false);
-                    convRL.loadImpulseResponse(BinaryData::GenelecRL_wav, BinaryData::GenelecRL_wavSize, false, false, maxSize, false);
-                    convRR.loadImpulseResponse(BinaryData::GenelecRR_wav, BinaryData::GenelecRR_wavSize, false, false, maxSize, false);
-                    break;
-                default:
-                    convLL.loadImpulseResponse(BinaryData::SRSX11LL_wav, BinaryData::SRSX11LL_wavSize, false, false, maxSize, false);
-                    convLR.loadImpulseResponse(BinaryData::SRSX11LR_wav, BinaryData::SRSX11LR_wavSize, false, false, maxSize, false);
-                    convRL.loadImpulseResponse(BinaryData::SRSX11RL_wav, BinaryData::SRSX11RL_wavSize, false, false, maxSize, false);
-                    convRR.loadImpulseResponse(BinaryData::SRSX11RR_wav, BinaryData::SRSX11RR_wavSize, false, false, maxSize, false);
-                    break;
-            }
+void DeviceSimulationPluginAudioProcessor::changeSpeaker(size_t maxSize, bool categoryChanged) {
+    auto newSpeaker = speakerTypeParam->getIndex();
+    auto currentSpeaker = speakerType.get();
+    if (newSpeaker != currentSpeaker || categoryChanged) {
+        speakerType.set(newSpeaker);
+        switch(newSpeaker) {
+            case 0:
+                convLL.loadImpulseResponse(BinaryData::SRSX11LL_wav, BinaryData::SRSX11LL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::SRSX11LR_wav, BinaryData::SRSX11LR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::SRSX11RL_wav, BinaryData::SRSX11RL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::SRSX11RR_wav, BinaryData::SRSX11RR_wavSize, false, false, maxSize, false);
+                break;
+            case 1:
+                convLL.loadImpulseResponse(BinaryData::GenelecLL_wav, BinaryData::GenelecLL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::GenelecLR_wav, BinaryData::GenelecLR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::GenelecRL_wav, BinaryData::GenelecRL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::GenelecRR_wav, BinaryData::GenelecRR_wavSize, false, false, maxSize, false);
+                break;
+            default:
+                convLL.loadImpulseResponse(BinaryData::SRSX11LL_wav, BinaryData::SRSX11LL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::SRSX11LR_wav, BinaryData::SRSX11LR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::SRSX11RL_wav, BinaryData::SRSX11RL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::SRSX11RR_wav, BinaryData::SRSX11RR_wavSize, false, false, maxSize, false);
+                break;
         }
     }
 }
