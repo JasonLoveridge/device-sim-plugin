@@ -12,6 +12,7 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "PluginProcessor.h"
+#include "Images.h"
 
 struct ParameterSlider    : public Slider,
 public Timer
@@ -69,6 +70,7 @@ public:
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
+    Image deviceImage;
     
     void comboBoxChanged(ComboBox*) override;
     void buttonClicked(Button*) override;

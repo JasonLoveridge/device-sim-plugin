@@ -20,8 +20,9 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     addAndMakeVisible(titleLabel);
-    titleLabel.setText("Device Simulator", NotificationType::dontSendNotification);
+    titleLabel.setText("Device Simulator.", NotificationType::dontSendNotification);
     titleLabel.setJustificationType(Justification::horizontallyCentred);
+    titleLabel.setFont(25.0f);
     
     addAndMakeVisible(phoneButton);
     phoneButton.setRadioGroupId(1);
@@ -105,7 +106,7 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     deviceTypeLabel.attachToComponent(&deviceTypeBox, true);
     
     addAndMakeVisible(otherButton);
-    otherButton.setButtonText("Other IR$");
+    otherButton.setButtonText("Other IR");
     otherButton.addListener(this);
     
     addAndMakeVisible(otherIRLabel);
@@ -118,7 +119,12 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     outputVolumeLabel.setJustificationType(Justification::centredLeft);
     outputVolumeLabel.attachToComponent(outputVolumeSlider, true);
     
-    setSize (500, 350);
+    deviceImage = ImageCache::getFromMemory(Images::iPhoneCropped_png, Images::iPhoneCropped_pngSize);
+    
+    //DeviceSimulationPluginAudioProcessorEditor::setResizable(true, true);
+    //DeviceSimulationPluginAudioProcessorEditor::setResizeLimits(300, 210, 1000, 700);
+    
+    setSize (500, 450);
 }
 
 DeviceSimulationPluginAudioProcessorEditor::~DeviceSimulationPluginAudioProcessorEditor()
@@ -203,6 +209,7 @@ void DeviceSimulationPluginAudioProcessorEditor::buttonClicked(Button* button) {
             processor.categoryParam->operator=(3);
             deviceTypeBox.setSelectedId(processor.bluetoothTypeParam->getIndex() + 1);
         }
+        DeviceSimulationPluginAudioProcessorEditor::repaint();
     }
 }
 
@@ -211,6 +218,31 @@ void DeviceSimulationPluginAudioProcessorEditor::paint (Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
+    switch(processor.categoryParam->getIndex()) {
+        case 0:
+            //https://mockuphone.com/iphone7plusgold
+            deviceImage = ImageCache::getFromMemory(Images::iPhoneCropped_png, Images::iPhoneCropped_pngSize);
+            g.drawImage(deviceImage, 125, 120, 250, 250, 0, 0, 750, 750);
+            break;
+        case 1:
+            deviceImage = ImageCache::getFromMemory(Images::macBookCropped2_png, Images::macBookCropped2_pngSize);
+            g.drawImage(deviceImage, 140, 175, 200, 200, 0, 0, 561, 562);
+            break;
+        case 2:
+            deviceImage = ImageCache::getFromMemory(Images::tvcropped_png, Images::tvcropped_pngSize);
+            g.drawImage(deviceImage, 135, 180, 239, 156, 0, 0, 716, 468);
+            break;
+        case 3:
+            //https://www.davistv.co.uk/sony-srsx11-portable-bluetooth-loudspeaker-black-3901-p.asp
+            deviceImage = ImageCache::getFromMemory(Images::cubeCropped_png, Images::cubeCropped_pngSize);
+            g.drawImage(deviceImage, 180, 200, 150, 152, 0, 0, 341, 348);
+            break;
+        default:
+            deviceImage = ImageCache::getFromMemory(Images::iPhoneCropped_png, Images::iPhoneCropped_pngSize);
+            g.drawImage(deviceImage, 125, 120, 250, 250, 0, 0, 750, 750);
+            break;
+    }
+    
 }
 
 void DeviceSimulationPluginAudioProcessorEditor::resized()
@@ -218,7 +250,7 @@ void DeviceSimulationPluginAudioProcessorEditor::resized()
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
     auto bounds = getLocalBounds().reduced(10);
-    const int titleHeight = 20;
+    const int titleHeight = 30;
     titleLabel.setBounds(bounds.removeFromTop(titleHeight));
     
     auto buttonBounds = bounds.removeFromTop(80).reduced(10);
@@ -245,17 +277,17 @@ void DeviceSimulationPluginAudioProcessorEditor::resized()
     deviceTypeBox.setBounds(typeBoxBounds);
     bounds.removeFromTop(15);
     
-    auto otherButtonBounds = bounds.removeFromTop(30);
-    otherButtonBounds.removeFromLeft(50);
-    otherButtonBounds.removeFromRight(50);
-    otherButton.setBounds(otherButtonBounds);
-    bounds.removeFromTop(15);
-    
-    otherIRLabel.setBounds(bounds.removeFromTop(30));
-    bounds.removeFromTop(15);
+//    auto otherButtonBounds = bounds.removeFromTop(30);
+//    otherButtonBounds.removeFromLeft(50);
+//    otherButtonBounds.removeFromRight(50);
+//    otherButton.setBounds(otherButtonBounds);
+//    bounds.removeFromTop(15);
+//    
+//    otherIRLabel.setBounds(bounds.removeFromTop(30));
+//    bounds.removeFromTop(15);
     
     bounds.removeFromLeft(125);
-    outputVolumeSlider->setBounds(bounds.removeFromTop(30));
+    outputVolumeSlider->setBounds(bounds.removeFromBottom(65));
     bounds.removeFromTop(15);
 }
 
