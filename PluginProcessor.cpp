@@ -1,15 +1,19 @@
 /*
  ==============================================================================
  
- This file was auto-generated!
+ Device Simulation Plugin - PluginProcessor.cpp
+ Author: Jason Loveridge
+ Date: 05/2018
+ BBC Research & Development
  
- It contains the basic framework code for a JUCE plugin processor.
+ Built upon JUCE plugin framework
  
  ==============================================================================
  */
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "DeviceEnumValues.h"
 
 
 //==============================================================================
@@ -102,8 +106,7 @@ void DeviceSimulationPluginAudioProcessor::changeProgramName (int index, const S
 //==============================================================================
 void DeviceSimulationPluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    // Prepare DSP objects for playback
     auto channels = static_cast<uint32> (jmin (getMainBusNumInputChannels(), getMainBusNumOutputChannels()));
     dsp::ProcessSpec spec { sampleRate, static_cast<uint32> (samplesPerBlock), channels };
     
@@ -113,12 +116,16 @@ void DeviceSimulationPluginAudioProcessor::prepareToPlay (double sampleRate, int
     convRL.prepare(spec);
     convRR.prepare(spec);
     outputVolume.prepare(spec);
-    //auto maxSize = static_cast<size_t> (roundToInt (getSampleRate() * (8192.0 / 44100.0)));
-    //convolution.loadImpulseResponse(BinaryData::iPhoneIR_wav, BinaryData::iPhoneIR_wavSize, false, true, maxSize);
-//    convLL.loadImpulseResponse(BinaryData::iPhone7PLL_wav, BinaryData::iPhone7PLL_wavSize, false, false, maxSize, false);
-//    convLR.loadImpulseResponse(BinaryData::iPhone7PLR_wav, BinaryData::iPhone7PLR_wavSize, false, false, maxSize, false);
-//    convRL.loadImpulseResponse(BinaryData::iPhone7PRL_wav, BinaryData::iPhone7PRL_wavSize, false, false, maxSize, false);
-//    convRR.loadImpulseResponse(BinaryData::iPhone7PRR_wav, BinaryData::iPhone7PRR_wavSize, false, false, maxSize, false);
+    
+    // If no impulses have been loaded (ie the plugin has been opened for the first time) then load the default iPhone IRs
+    if (!impulsesLoaded) {
+        auto maxSize = static_cast<size_t> (roundToInt (getSampleRate() * (8192.0 / 44100.0)));
+        convLL.loadImpulseResponse(BinaryData::iPhone7PLL_wav, BinaryData::iPhone7PLL_wavSize, false, false, maxSize, false);
+        convLR.loadImpulseResponse(BinaryData::iPhone7PLR_wav, BinaryData::iPhone7PLR_wavSize, false, false, maxSize, false);
+        convRL.loadImpulseResponse(BinaryData::iPhone7PRL_wav, BinaryData::iPhone7PRL_wavSize, false, false, maxSize, false);
+        convRR.loadImpulseResponse(BinaryData::iPhone7PRR_wav, BinaryData::iPhone7PRR_wavSize, false, false, maxSize, false);
+        impulsesLoaded = true;
+    }
     
     updateParameters();
 }
@@ -209,44 +216,32 @@ void DeviceSimulationPluginAudioProcessor::updateParameters() {
     
     size_t maxSize = static_cast<size_t> (roundToInt (getSampleRate() * (8192.0 / 44100.0)));
     
-    auto newCategory = categoryParam->getIndex();
-    auto currentCategory = category.get();
+    auto currentCategory = categoryParam->getIndex();
+    auto previousCategory = category.get();
     bool categoryChanged = false;
     
-    // If the category has just changed, the default device from that category will be loaded
-    // Otherwise the category will be checked and if a different device has been selected using the dropdown menu
-    // then the simulation will change accordingly
-    if (newCategory != currentCategory) {
+    if (currentCategory != previousCategory) {
         categoryChanged = true;
-        category.set(newCategory);
+        category.set(currentCategory);
     }
     
-    switch(newCategory) {
-        case 0:
+    // If there has been a category change or combo box selection change then new impulse responses will be loaded
+    switch(currentCategory) {
+        case PHONE:
             changePhone(maxSize, categoryChanged);
             break;
-        case 1:
+        case LAPTOP:
             changeLaptop(maxSize, categoryChanged);
             break;
-        case 2:
+        case TELEVISION:
             changeTelevision(maxSize, categoryChanged);
             break;
-        case 3:
+        case SPEAKER:
             changeSpeaker(maxSize, categoryChanged);
             break;
         default:
             changePhone(maxSize, categoryChanged);
             break;
-    }
-    
-    if (fileChanged) {
-        fileChanged = false;
-        impulsesLoaded = true;
-        // convolution.loadImpulseResponse(otherIRFile, false, true, maxSize);
-        convLL.loadImpulseResponse(llIR, false, false, maxSize, false);
-        convLR.loadImpulseResponse(lrIR, false, false, maxSize, false);
-        convRL.loadImpulseResponse(rlIR, false, false, maxSize, false);
-        convRR.loadImpulseResponse(rrIR, false, false, maxSize, false);
     }
 }
 
@@ -256,7 +251,7 @@ void DeviceSimulationPluginAudioProcessor::changePhone(size_t maxSize, bool cate
     if (newPhone != currentPhone || categoryChanged) {
         phoneType.set(newPhone);
         switch(newPhone) {
-            case 0:
+            case IPHONE_7_PLUS:
                 convLL.loadImpulseResponse(BinaryData::iPhone7PLL_wav, BinaryData::iPhone7PLL_wavSize, false, false, maxSize, false);
                 convLR.loadImpulseResponse(BinaryData::iPhone7PLR_wav, BinaryData::iPhone7PLR_wavSize, false, false, maxSize, false);
                 convRL.loadImpulseResponse(BinaryData::iPhone7PRL_wav, BinaryData::iPhone7PRL_wavSize, false, false, maxSize, false);
@@ -278,7 +273,7 @@ void DeviceSimulationPluginAudioProcessor::changeLaptop(size_t maxSize, bool cat
     if (newLaptop != currentLaptop || categoryChanged) {
         laptopType.set(newLaptop);
         switch(newLaptop) {
-            case 0:
+            case MACBOOK_PRO_2013:
                 convLL.loadImpulseResponse(BinaryData::MacBookProLL_wav, BinaryData::MacBookProLL_wavSize, false, false, maxSize, false);
                 convLR.loadImpulseResponse(BinaryData::MacBookProLR_wav, BinaryData::MacBookProLR_wavSize, false, false, maxSize, false);
                 convRL.loadImpulseResponse(BinaryData::MacBookProRL_wav, BinaryData::MacBookProRL_wavSize, false, false, maxSize, false);
@@ -300,7 +295,7 @@ void DeviceSimulationPluginAudioProcessor::changeTelevision(size_t maxSize, bool
     if (newTV != currentTV || categoryChanged) {
         tvType.set(newTV);
         switch(newTV) {
-            case 0:
+            case PANASONIC_TXL47ET5B:
                 convLL.loadImpulseResponse(BinaryData::PanaTVLL_wav, BinaryData::PanaTVLL_wavSize, false, false, maxSize, false);
                 convLR.loadImpulseResponse(BinaryData::PanaTVLR_wav, BinaryData::PanaTVLR_wavSize, false, false, maxSize, false);
                 convRL.loadImpulseResponse(BinaryData::PanaTVRL_wav, BinaryData::PanaTVRL_wavSize, false, false, maxSize, false);
@@ -322,13 +317,13 @@ void DeviceSimulationPluginAudioProcessor::changeSpeaker(size_t maxSize, bool ca
     if (newSpeaker != currentSpeaker || categoryChanged) {
         speakerType.set(newSpeaker);
         switch(newSpeaker) {
-            case 0:
+            case SONY_SRSX11:
                 convLL.loadImpulseResponse(BinaryData::SRSX11LL_wav, BinaryData::SRSX11LL_wavSize, false, false, maxSize, false);
                 convLR.loadImpulseResponse(BinaryData::SRSX11LR_wav, BinaryData::SRSX11LR_wavSize, false, false, maxSize, false);
                 convRL.loadImpulseResponse(BinaryData::SRSX11RL_wav, BinaryData::SRSX11RL_wavSize, false, false, maxSize, false);
                 convRR.loadImpulseResponse(BinaryData::SRSX11RR_wav, BinaryData::SRSX11RR_wavSize, false, false, maxSize, false);
                 break;
-            case 1:
+            case GENELEC_6010_PAIR:
                 convLL.loadImpulseResponse(BinaryData::GenelecLL_wav, BinaryData::GenelecLL_wavSize, false, false, maxSize, false);
                 convLR.loadImpulseResponse(BinaryData::GenelecLR_wav, BinaryData::GenelecLR_wavSize, false, false, maxSize, false);
                 convRL.loadImpulseResponse(BinaryData::GenelecRL_wav, BinaryData::GenelecRL_wavSize, false, false, maxSize, false);

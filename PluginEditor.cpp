@@ -1,7 +1,7 @@
 /*
  ==============================================================================
  
- Device Simulation Plugin - Editor.cpp
+ Device Simulation Plugin - PluginEditor.cpp
  Author: Jason Loveridge
  Date: 05/2018
  BBC Research & Development
@@ -13,6 +13,7 @@
 
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "DeviceEnumValues.h"
 
 
 //==============================================================================
@@ -27,7 +28,7 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     titleLabel.setFont(25.0f);
     
     addAndMakeVisible(phoneButton);
-    phoneButton.setRadioGroupId(6);
+    phoneButton.setRadioGroupId(1);
     phoneButton.addListener(this);
     
     addAndMakeVisible(laptopButton);
@@ -61,7 +62,23 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     // Fill dropdown menu with device choices from relevant category
     addAndMakeVisible(deviceTypeBox);
     fillDeviceTypeBox(processor.categoryParam->getIndex());
-
+    switch(processor.categoryParam->getIndex()) {
+        case PHONE:
+            phoneButton.setToggleState(true, NotificationType::dontSendNotification);
+            break;
+        case LAPTOP:
+            laptopButton.setToggleState(true, NotificationType::dontSendNotification);
+            break;
+        case TELEVISION:
+            tvButton.setToggleState(true, NotificationType::dontSendNotification);
+            break;
+        case SPEAKER:
+            speakerButton.setToggleState(true, NotificationType::dontSendNotification);
+            break;
+        default:
+            phoneButton.setToggleState(true, NotificationType::dontSendNotification);
+            break;
+    }
     
     // Add drop down menu, label and also output volume control and label
     deviceTypeBox.addListener(this);
@@ -90,16 +107,16 @@ DeviceSimulationPluginAudioProcessorEditor::~DeviceSimulationPluginAudioProcesso
 // If the combo box is changed, change to the corresponding device in the processor
 void DeviceSimulationPluginAudioProcessorEditor::comboBoxChanged(ComboBox* box) {
     switch(processor.categoryParam->getIndex()) {
-        case phone:
+        case PHONE:
             processor.phoneTypeParam->operator=(box->getSelectedItemIndex());
             break;
-        case laptop:
+        case LAPTOP:
             processor.laptopTypeParam->operator=(box->getSelectedItemIndex());
             break;
-        case television:
+        case TELEVISION:
             processor.tvTypeParam->operator=(box->getSelectedItemIndex());
             break;
-        case speaker:
+        case SPEAKER:
             processor.speakerTypeParam->operator=(box->getSelectedItemIndex());            
             break;
         default:
@@ -113,16 +130,16 @@ void DeviceSimulationPluginAudioProcessorEditor::comboBoxChanged(ComboBox* box) 
 
 void DeviceSimulationPluginAudioProcessorEditor::buttonClicked(Button* button) {
     if (button == &phoneButton) {
-        fillDeviceTypeBox(phone);
+        fillDeviceTypeBox(PHONE);
     }
     else if (button == &laptopButton) {
-        fillDeviceTypeBox(laptop);
+        fillDeviceTypeBox(LAPTOP);
     }
     else if (button == &tvButton) {
-        fillDeviceTypeBox(television);
+        fillDeviceTypeBox(TELEVISION);
     }
     else if (button == &speakerButton) {
-        fillDeviceTypeBox(speaker);
+        fillDeviceTypeBox(SPEAKER);
     }
     DeviceSimulationPluginAudioProcessorEditor::repaint();
 }
@@ -132,32 +149,28 @@ void DeviceSimulationPluginAudioProcessorEditor::fillDeviceTypeBox(int category)
     deviceTypeBox.clear();
     auto i = 1;
     switch (category) {
-        case phone:
-            //phoneButton.setToggleState(true, NotificationType::dontSendNotification);
+        case PHONE:
             for (auto choice:processor.phoneTypeParam->choices) {
                 deviceTypeBox.addItem(choice, i++);
             }
             
             deviceTypeBox.setSelectedId(processor.phoneTypeParam->getIndex() + 1);
             break;
-        case laptop:
-            //laptopButton.setToggleState(true, NotificationType::dontSendNotification);
+        case LAPTOP:
             for (auto choice:processor.laptopTypeParam->choices) {
                 deviceTypeBox.addItem(choice, i++);
             }
             
             deviceTypeBox.setSelectedId(processor.laptopTypeParam->getIndex() + 1);
             break;
-        case television:
-            //tvButton.setToggleState(true, NotificationType::dontSendNotification);
+        case TELEVISION:
             for (auto choice:processor.tvTypeParam->choices) {
                 deviceTypeBox.addItem(choice, i++);
             }
             
             deviceTypeBox.setSelectedId(processor.tvTypeParam->getIndex() + 1);
             break;
-        case speaker:
-            //speakerButton.setToggleState(true, NotificationType::dontSendNotification);
+        case SPEAKER:
             for (auto choice:processor.speakerTypeParam->choices) {
                 deviceTypeBox.addItem(choice, i++);
             }
@@ -165,7 +178,6 @@ void DeviceSimulationPluginAudioProcessorEditor::fillDeviceTypeBox(int category)
             deviceTypeBox.setSelectedId(processor.speakerTypeParam->getIndex() + 1);
             break;
         default:
-            //phoneButton.setToggleState(true, NotificationType::dontSendNotification);
             for (auto choice:processor.phoneTypeParam->choices) {
                 deviceTypeBox.addItem(choice, i++);
             }
@@ -179,31 +191,30 @@ void DeviceSimulationPluginAudioProcessorEditor::fillDeviceTypeBox(int category)
 //==============================================================================
 void DeviceSimulationPluginAudioProcessorEditor::paint (Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
     switch(processor.categoryParam->getIndex()) {
-        case phone:
+        case PHONE:
             //https://mockuphone.com/iphone7plusgold
             deviceImage = ImageCache::getFromMemory(Images::iPhoneCropped_png, Images::iPhoneCropped_pngSize);
             g.drawImage(deviceImage, 125, 120, 250, 250, 0, 0, 750, 750);
             break;
-        case laptop:
+        case LAPTOP:
             //https://www.ifixit.com/Device/MacBook_Pro_13%22_Retina_Display_Early_2013
             deviceImage = ImageCache::getFromMemory(Images::macBookCropped2_png, Images::macBookCropped2_pngSize);
             g.drawImage(deviceImage, 140, 175, 200, 200, 0, 0, 561, 562);
             break;
-        case television:
+        case TELEVISION:
             //https://www.cnet.com/uk/products/panasonic-tx-l47e5b/review/
             deviceImage = ImageCache::getFromMemory(Images::tvcropped_png, Images::tvcropped_pngSize);
             g.drawImage(deviceImage, 135, 180, 239, 156, 0, 0, 716, 468);
             break;
-        case speaker:
-            if (processor.speakerTypeParam->getIndex() == SRSX11) {
+        case SPEAKER:
+            if (processor.speakerTypeParam->getIndex() == SONY_SRSX11) {
                 //https://www.davistv.co.uk/sony-srsx11-portable-speaker-loudspeaker-black-3901-p.asp
                 deviceImage = ImageCache::getFromMemory(Images::cubeCropped_png, Images::cubeCropped_pngSize);
                 g.drawImage(deviceImage, 180, 200, 150, 152, 0, 0, 341, 348);
             }
-            else if (processor.speakerTypeParam->getIndex() == Genelec6010Pair) {
+            else if (processor.speakerTypeParam->getIndex() == GENELEC_6010_PAIR) {
                 //https://www.genelec.com/support-technology/previous-models/6010a-studio-monitor
                 deviceImage = ImageCache::getFromMemory(Images::genelec6010_png, Images::genelec6010_pngSize);
                 g.drawImage(deviceImage, 155, 200, 200, 140, 0, 0, 800, 560);
@@ -219,8 +230,6 @@ void DeviceSimulationPluginAudioProcessorEditor::paint (Graphics& g)
 
 void DeviceSimulationPluginAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
     auto bounds = getLocalBounds().reduced(10);
     const int titleHeight = 30;
     titleLabel.setBounds(bounds.removeFromTop(titleHeight));
@@ -248,15 +257,6 @@ void DeviceSimulationPluginAudioProcessorEditor::resized()
     typeBoxBounds.removeFromRight(40);
     deviceTypeBox.setBounds(typeBoxBounds);
     bounds.removeFromTop(15);
-    
-//    auto otherButtonBounds = bounds.removeFromTop(30);
-//    otherButtonBounds.removeFromLeft(50);
-//    otherButtonBounds.removeFromRight(50);
-//    otherButton.setBounds(otherButtonBounds);
-//    bounds.removeFromTop(15);
-//    
-//    otherIRLabel.setBounds(bounds.removeFromTop(30));
-//    bounds.removeFromTop(15);
     
     bounds.removeFromLeft(125);
     outputVolumeSlider->setBounds(bounds.removeFromBottom(65));

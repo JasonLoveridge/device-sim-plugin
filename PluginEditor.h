@@ -68,17 +68,6 @@ public:
     void resized() override;
     
 private:
-    enum Categories {
-        phone = 0,
-        laptop = 1,
-        television = 2,
-        speaker = 3
-    };
-    
-    enum Speakers {
-        SRSX11 = 0,
-        Genelec6010Pair = 1
-    };
     
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
