@@ -1,15 +1,17 @@
 /*
-  ==============================================================================
+ ==============================================================================
+ 
+ Device Simulation Plugin - DeviceEnumValues.h
+ Author: Jason Loveridge
+ Date: 05/2018
+ BBC Research & Development
 
-    EnumValues.h
-    Created: 27 Apr 2018 3:09:51pm
-    Author:  Jason Loveridge
-
-  ==============================================================================
-*/
+ ==============================================================================
+ */
 
 #pragma once
 
+// Enumerated values for each device category and then also for each device within each category
 enum Categories {
     PHONE = 0,
     LAPTOP = 1,

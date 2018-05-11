@@ -30,7 +30,11 @@
                                                                     //[Comments]
     An auto-generated component, created by the Projucer.
 
-    Describe your class and how it works here!
+    Images.h is used to declare the various images used with the plugin
+ 
+    Author: Jason Loveridge
+    Date: 05/2018
+    BBC Research & Development
                                                                     //[/Comments]
 */
 class Images  : public Component

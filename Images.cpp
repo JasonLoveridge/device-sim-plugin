@@ -13,6 +13,12 @@
 
   The Projucer is part of the JUCE library.
   Copyright (c) 2017 - ROLI Ltd.
+ 
+  Images.cpp is used to store the various images used with the plugin
+
+  Author: Jason Loveridge
+  Date: 05/2018
+  BBC Research & Development
 
   ==============================================================================
 */

@@ -1,9 +1,12 @@
 /*
  ==============================================================================
  
- This file was auto-generated!
+ Device Simulation Plugin - PluginEditor.h
+ Author: Jason Loveridge
+ Date: 05/2018
+ BBC Research & Development
  
- It contains the basic framework code for a JUCE plugin editor.
+ Built upon JUCE plugin framework
  
  ==============================================================================
  */
@@ -14,6 +17,7 @@
 #include "PluginProcessor.h"
 #include "Images.h"
 
+// ParameterSlider object - code taken from "DSP module plugin demo" provided by JUCE
 struct ParameterSlider    : public Slider,
 public Timer
 {
@@ -69,8 +73,7 @@ public:
     
 private:
     
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
+    // Declare functions and GUI components required for plugin
     Image deviceImage;
     
     void comboBoxChanged(ComboBox*) override;
@@ -78,9 +81,9 @@ private:
     void fillDeviceTypeBox(int category);
     
     DeviceSimulationPluginAudioProcessor& processor;
-    Label outputVolumeLabel, deviceTypeLabel, titleLabel;
+    Label outputGainLabel, deviceTypeLabel, titleLabel;
     Label phoneButtonLabel, laptopButtonLabel, tvButtonLabel, speakerButtonLabel;
-    ScopedPointer<ParameterSlider> outputVolumeSlider;
+    ScopedPointer<ParameterSlider> outputGainSlider;
     ComboBox deviceTypeBox;
     ToggleButton phoneButton, laptopButton, tvButton, speakerButton;
     

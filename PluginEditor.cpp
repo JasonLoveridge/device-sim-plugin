@@ -19,7 +19,7 @@
 //==============================================================================
 DeviceSimulationPluginAudioProcessorEditor::DeviceSimulationPluginAudioProcessorEditor (DeviceSimulationPluginAudioProcessor& p)
 : AudioProcessorEditor (&p), processor (p),
-outputVolumeLabel({}, processor.outputVolumeParam->name)
+outputGainLabel({}, processor.outputGainParam->name)
 {
     //Add and initialise labels and radio button components
     addAndMakeVisible(titleLabel);
@@ -59,7 +59,7 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     speakerButtonLabel.setText("Other Speaker", NotificationType::dontSendNotification);
     speakerButtonLabel.setJustificationType(Justification::horizontallyCentred);
     
-    // Fill dropdown menu with device choices from relevant category
+    // Fill combobox with device choices from relevant category
     addAndMakeVisible(deviceTypeBox);
     fillDeviceTypeBox(processor.categoryParam->getIndex());
     switch(processor.categoryParam->getIndex()) {
@@ -80,7 +80,7 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
             break;
     }
     
-    // Add drop down menu, label and also output volume control and label
+    // Add combobox, label and also output gain control and label
     deviceTypeBox.addListener(this);
     deviceTypeBox.setJustificationType(Justification::horizontallyCentred);
     
@@ -88,11 +88,11 @@ outputVolumeLabel({}, processor.outputVolumeParam->name)
     deviceTypeLabel.setJustificationType(Justification::centredLeft);
     deviceTypeLabel.attachToComponent(&deviceTypeBox, true);
     
-    addAndMakeVisible(outputVolumeSlider = new ParameterSlider(*processor.outputVolumeParam));
+    addAndMakeVisible(outputGainSlider = new ParameterSlider(*processor.outputGainParam));
     
-    addAndMakeVisible(outputVolumeLabel);
-    outputVolumeLabel.setJustificationType(Justification::centredLeft);
-    outputVolumeLabel.attachToComponent(outputVolumeSlider, true);
+    addAndMakeVisible(outputGainLabel);
+    outputGainLabel.setJustificationType(Justification::centredLeft);
+    outputGainLabel.attachToComponent(outputGainSlider, true);
     
     // Initialise device image to iPhone
     deviceImage = ImageCache::getFromMemory(Images::iPhoneCropped_png, Images::iPhoneCropped_pngSize);
@@ -104,7 +104,8 @@ DeviceSimulationPluginAudioProcessorEditor::~DeviceSimulationPluginAudioProcesso
 {
 }
 
-// If the combo box is changed, change to the corresponding device in the processor
+// If the combobox is changed, change the corresponding device parameter in the processor
+// The current device category is switched on such that the correct device parameter is changed
 void DeviceSimulationPluginAudioProcessorEditor::comboBoxChanged(ComboBox* box) {
     switch(processor.categoryParam->getIndex()) {
         case PHONE:
@@ -128,6 +129,7 @@ void DeviceSimulationPluginAudioProcessorEditor::comboBoxChanged(ComboBox* box) 
     DeviceSimulationPluginAudioProcessorEditor::repaint();
 }
 
+// If one of the radio buttons is clicked, call a function to update the combobox accordingly
 void DeviceSimulationPluginAudioProcessorEditor::buttonClicked(Button* button) {
     if (button == &phoneButton) {
         fillDeviceTypeBox(PHONE);
@@ -145,6 +147,8 @@ void DeviceSimulationPluginAudioProcessorEditor::buttonClicked(Button* button) {
 }
 
 // Change the combo box options according to the category that has been selected
+// Options for each device category and taken from the corresponding AudioParameter, which is
+// initialised in the processor
 void DeviceSimulationPluginAudioProcessorEditor::fillDeviceTypeBox(int category) {
     deviceTypeBox.clear();
     auto i = 1;
@@ -192,6 +196,10 @@ void DeviceSimulationPluginAudioProcessorEditor::fillDeviceTypeBox(int category)
 void DeviceSimulationPluginAudioProcessorEditor::paint (Graphics& g)
 {
     g.fillAll (getLookAndFeel().findColour (ResizableWindow::backgroundColourId));
+    
+    // Change image according to device selected
+    // Fixed values are used for each image's size and location such that they are all centred
+    // This is not ideal and could be improved by using source images that all have the same dimensions
     switch(processor.categoryParam->getIndex()) {
         case PHONE:
             //https://mockuphone.com/iphone7plusgold
@@ -228,38 +236,56 @@ void DeviceSimulationPluginAudioProcessorEditor::paint (Graphics& g)
     
 }
 
+// The layout of the plugin is done by dividing down the GUI area into rectangles
+// See JUCE tutorials for more on this
 void DeviceSimulationPluginAudioProcessorEditor::resized()
 {
-    auto bounds = getLocalBounds().reduced(10);
+    const int border = 10;
     const int titleHeight = 30;
+    const int categoriesHeight = 80;
+    const int catLabelHeight = 30;
+    const int buttonSize = 14;
+    const int comboBoxBoundsHeight = 40;
+    const int comboBoxInset = 40;
+    const int gainSliderWidth = 375;
+    const int gainSliderHeight = 65;
+    
+    // Add the title in a rectangle at the top of the plugin window
+    auto bounds = getLocalBounds().reduced(border);
     titleLabel.setBounds(bounds.removeFromTop(titleHeight));
     
-    auto buttonBounds = bounds.removeFromTop(80).reduced(10);
-    auto buttonLabelBounds = buttonBounds.removeFromTop(30);
-    phoneButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 4));
-    laptopButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 3));
-    tvButtonLabel.setBounds(buttonLabelBounds.removeFromLeft(buttonLabelBounds.getWidth() / 2));
-    speakerButtonLabel.setBounds(buttonLabelBounds);
+    // catButtonBounds is the rectangle that contains the label and radio button for each device category
+    auto catButtonBounds = bounds.removeFromTop(categoriesHeight).reduced(border);
     
-    const int buttonSize = 14;
-    const int inset = (buttonBounds.getWidth() / 8) + buttonSize;
-    phoneButton.setBounds(buttonBounds.removeFromLeft(buttonBounds.getWidth() / 4));
+    // catLabelBounds is a sub-rectangle within catButtonBounds for the labels only
+    // Labels are spaced out evenly across the width available
+    auto catLabelBounds = catButtonBounds.removeFromTop(catLabelHeight);
+    phoneButtonLabel.setBounds(catLabelBounds.removeFromLeft(catLabelBounds.getWidth() / 4));
+    laptopButtonLabel.setBounds(catLabelBounds.removeFromLeft(catLabelBounds.getWidth() / 3));
+    tvButtonLabel.setBounds(catLabelBounds.removeFromLeft(catLabelBounds.getWidth() / 2));
+    speakerButtonLabel.setBounds(catLabelBounds);
+    
+    // The rest of catButtonBounds is used to add the buttons
+    // Buttons are spaced out evenly across the width available, using inset to ensure correct spacing
+    const int inset = (catButtonBounds.getWidth() / 8) + buttonSize;
+    phoneButton.setBounds(catButtonBounds.removeFromLeft(catButtonBounds.getWidth() / 4));
     phoneButton.setBounds(phoneButton.getBounds().removeFromRight(inset));
-    laptopButton.setBounds(buttonBounds.removeFromLeft(buttonBounds.getWidth() / 3));
+    laptopButton.setBounds(catButtonBounds.removeFromLeft(catButtonBounds.getWidth() / 3));
     laptopButton.setBounds(laptopButton.getBounds().removeFromRight(inset));
-    tvButton.setBounds(buttonBounds.removeFromLeft(buttonBounds.getWidth() / 2));
+    tvButton.setBounds(catButtonBounds.removeFromLeft(catButtonBounds.getWidth() / 2));
     tvButton.setBounds(tvButton.getBounds().removeFromRight(inset));
-    speakerButton.setBounds(buttonBounds);
+    speakerButton.setBounds(catButtonBounds);
     speakerButton.setBounds(speakerButton.getBounds().removeFromRight(inset));
     
-    auto typeBoxBounds = bounds.removeFromTop(40);
-    typeBoxBounds.removeFromLeft(40);
-    typeBoxBounds.removeFromRight(40);
-    deviceTypeBox.setBounds(typeBoxBounds);
-    bounds.removeFromTop(15);
+    // Device selection combobox is added next, using its own inset to reduce its width
+    auto comboBoxBounds = bounds.removeFromTop(comboBoxBoundsHeight);
+    comboBoxBounds.removeFromLeft(comboBoxInset);
+    comboBoxBounds.removeFromRight(comboBoxInset);
+    deviceTypeBox.setBounds(comboBoxBounds);
     
-    bounds.removeFromLeft(125);
-    outputVolumeSlider->setBounds(bounds.removeFromBottom(65));
-    bounds.removeFromTop(15);
+    // Taking only a portion of the available width for the slider leaves space for the
+    // label and value to be displayed to the left of the slider
+    auto sliderBounds = bounds.removeFromRight(gainSliderWidth);
+    outputGainSlider->setBounds(sliderBounds.removeFromBottom(gainSliderHeight));
 }
 

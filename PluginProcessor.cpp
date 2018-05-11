@@ -29,7 +29,8 @@ DeviceSimulationPluginAudioProcessor::DeviceSimulationPluginAudioProcessor()
                   )
 #endif
 {
-    addParameter(outputVolumeParam = new AudioParameterFloat("OUTPUT", "Output Volume", {-40.f, 40.f, 0.f, 1.0f}, 0.f, "dB"));
+    // Initialise AudioParameters with device options
+    addParameter(outputGainParam = new AudioParameterFloat("OUTPUT", "Output Gain", {-40.f, 40.f, 0.f, 1.0f}, 0.f, "dB"));
     addParameter(categoryParam = new AudioParameterChoice("CATEGORY", "Device Category", {"Phone", "Laptop", "Television", "speaker Speaker"}, 0));
     addParameter(phoneTypeParam = new AudioParameterChoice("PHONETYPE", "Phone Type", {"iPhone 7 Plus"}, 0));
     addParameter(laptopTypeParam = new AudioParameterChoice("LAPTOPTYPE", "Laptop Type", {"MacBook Pro (2013)"}, 0));
@@ -109,13 +110,12 @@ void DeviceSimulationPluginAudioProcessor::prepareToPlay (double sampleRate, int
     // Prepare DSP objects for playback
     auto channels = static_cast<uint32> (jmin (getMainBusNumInputChannels(), getMainBusNumOutputChannels()));
     dsp::ProcessSpec spec { sampleRate, static_cast<uint32> (samplesPerBlock), channels };
-    
-    convolution.prepare(spec);
+
     convLL.prepare(spec);
     convLR.prepare(spec);
     convRL.prepare(spec);
     convRR.prepare(spec);
-    outputVolume.prepare(spec);
+    outputGain.prepare(spec);
     
     // If no impulses have been loaded (ie the plugin has been opened for the first time) then load the default iPhone IRs
     if (!impulsesLoaded) {
@@ -160,8 +160,13 @@ bool DeviceSimulationPluginAudioProcessor::isBusesLayoutSupported (const BusesLa
 }
 #endif
 
+// ******************************************************
+// Main processing function where convolution is executed
+// ******************************************************
 void DeviceSimulationPluginAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages)
 {
+    // JUCE default code
+    // ------------------------------------------------------------------------
     ScopedNoDenormals noDenormals;
     const int totalNumInputChannels  = getTotalNumInputChannels();
     const int totalNumOutputChannels = getTotalNumOutputChannels();
@@ -175,21 +180,24 @@ void DeviceSimulationPluginAudioProcessor::processBlock (AudioSampleBuffer& buff
     for (int i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
     
+    // ------------------------------------------------------------------------
+    
     updateParameters();
     
-    // Make copies of audio samples to be processed
+    // Make copies of current audio samples to be processed
     AudioBuffer<float> bufferA, bufferB;
     bufferA.makeCopyOf(buffer);
     bufferB.makeCopyOf(buffer);
     
-    // Blocks A and B are pointing to separate copies of the input audio
+    // Create AudioBlocks pointing to the separate copies of audio samples to be processed
     dsp::AudioBlock<float> blockA (bufferA);
     dsp::AudioBlock<float> blockB (bufferB);
+    
     // Chop blocks into separate left/right channels
-    dsp::AudioBlock<float> inLeftA = blockA.getSingleChannelBlock(0);
-    dsp::AudioBlock<float> inLeftB = blockB.getSingleChannelBlock(0);
-    dsp::AudioBlock<float> inRightA = blockA.getSingleChannelBlock(1);
-    dsp::AudioBlock<float> inRightB = blockB.getSingleChannelBlock(1);
+    dsp::AudioBlock<float> inLeftA = blockA.getSingleChannelBlock(LEFT);
+    dsp::AudioBlock<float> inLeftB = blockB.getSingleChannelBlock(LEFT);
+    dsp::AudioBlock<float> inRightA = blockA.getSingleChannelBlock(RIGHT);
+    dsp::AudioBlock<float> inRightB = blockB.getSingleChannelBlock(RIGHT);
     
     // Perform two convolutions on each channel of input data
     convLL.process(dsp::ProcessContextReplacing<float> (inLeftA));
@@ -198,21 +206,24 @@ void DeviceSimulationPluginAudioProcessor::processBlock (AudioSampleBuffer& buff
     convRR.process(dsp::ProcessContextReplacing<float> (inRightB));
     
     // Sum the four convolved signals together to form two output channels
-    // outBlock is pointing at the input buffer so changing its contents generates the plugin output
+    // outBlock is pointing at the original input buffer, so changing its contents changes the plugin output
     dsp::AudioBlock<float> outBlock (buffer);
-    dsp::AudioBlock<float> outLeft = outBlock.getSingleChannelBlock(0);
+    dsp::AudioBlock<float> outLeft = outBlock.getSingleChannelBlock(LEFT);
     outLeft.copy(inLeftA.add(inRightA));
-    dsp::AudioBlock<float> outRight = outBlock.getSingleChannelBlock(1);
+    dsp::AudioBlock<float> outRight = outBlock.getSingleChannelBlock(RIGHT);
     outRight.copy(inLeftB.add(inRightB));
     
     // Apply gain stage to output signal
-    outputVolume.process(dsp::ProcessContextReplacing<float> (outLeft));
-    outputVolume.process(dsp::ProcessContextReplacing<float> (outRight));
+    outputGain.process(dsp::ProcessContextReplacing<float> (outLeft));
+    outputGain.process(dsp::ProcessContextReplacing<float> (outRight));
 }
 
+// This function is called frequently from the processBlock function and is used to check for changes to parameters
 void DeviceSimulationPluginAudioProcessor::updateParameters() {
-    auto outputdB = Decibels::decibelsToGain(outputVolumeParam->get());
-    if (outputVolume.getGainLinear() != outputdB) outputVolume.setGainLinear(outputdB);
+    
+    // Update output gain setting
+    auto outputdB = Decibels::decibelsToGain(outputGainParam->get());
+    if (outputGain.getGainLinear() != outputdB) outputGain.setGainLinear(outputdB);
     
     size_t maxSize = static_cast<size_t> (roundToInt (getSampleRate() * (8192.0 / 44100.0)));
     
@@ -220,6 +231,7 @@ void DeviceSimulationPluginAudioProcessor::updateParameters() {
     auto previousCategory = category.get();
     bool categoryChanged = false;
     
+    // Check if the device category has been changed
     if (currentCategory != previousCategory) {
         categoryChanged = true;
         category.set(currentCategory);
@@ -245,6 +257,15 @@ void DeviceSimulationPluginAudioProcessor::updateParameters() {
     }
 }
 
+//******************************************************************
+// Each of the following five functions loads impulse responses according to category and device selection
+// If the category has just been changed, or the device selection within the same category has been changed
+// then new impulse responses are loaded into the convolution objects accordingly
+// If the category has been changed, the last selected device from that category is loaded (if it is the first time
+// using that category then the default device is loaded)
+//
+// See changeSpeaker for example code where more than one option exists within a category
+//******************************************************************
 void DeviceSimulationPluginAudioProcessor::changePhone(size_t maxSize, bool categoryChanged) {
     auto newPhone = phoneTypeParam->getIndex();
     auto currentPhone = phoneType.get();
@@ -274,16 +295,16 @@ void DeviceSimulationPluginAudioProcessor::changeLaptop(size_t maxSize, bool cat
         laptopType.set(newLaptop);
         switch(newLaptop) {
             case MACBOOK_PRO_2013:
-                convLL.loadImpulseResponse(BinaryData::MacBookProLL_wav, BinaryData::MacBookProLL_wavSize, false, false, maxSize, false);
-                convLR.loadImpulseResponse(BinaryData::MacBookProLR_wav, BinaryData::MacBookProLR_wavSize, false, false, maxSize, false);
-                convRL.loadImpulseResponse(BinaryData::MacBookProRL_wav, BinaryData::MacBookProRL_wavSize, false, false, maxSize, false);
-                convRR.loadImpulseResponse(BinaryData::MacBookProRR_wav, BinaryData::MacBookProRR_wavSize, false, false, maxSize, false);
+                convLL.loadImpulseResponse(BinaryData::MacBook13LL_wav, BinaryData::MacBook13LL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::MacBook13LR_wav, BinaryData::MacBook13LR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::MacBook13RL_wav, BinaryData::MacBook13RL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::MacBook13RR_wav, BinaryData::MacBook13RR_wavSize, false, false, maxSize, false);
                 break;
             default:
-                convLL.loadImpulseResponse(BinaryData::MacBookProLL_wav, BinaryData::MacBookProLL_wavSize, false, false, maxSize, false);
-                convLR.loadImpulseResponse(BinaryData::MacBookProLR_wav, BinaryData::MacBookProLR_wavSize, false, false, maxSize, false);
-                convRL.loadImpulseResponse(BinaryData::MacBookProRL_wav, BinaryData::MacBookProRL_wavSize, false, false, maxSize, false);
-                convRR.loadImpulseResponse(BinaryData::MacBookProRR_wav, BinaryData::MacBookProRR_wavSize, false, false, maxSize, false);
+                convLL.loadImpulseResponse(BinaryData::MacBook13LL_wav, BinaryData::MacBook13LL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::MacBook13LR_wav, BinaryData::MacBook13LR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::MacBook13RL_wav, BinaryData::MacBook13RL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::MacBook13RR_wav, BinaryData::MacBook13RR_wavSize, false, false, maxSize, false);
                 break;
         }
     }
@@ -318,22 +339,22 @@ void DeviceSimulationPluginAudioProcessor::changeSpeaker(size_t maxSize, bool ca
         speakerType.set(newSpeaker);
         switch(newSpeaker) {
             case SONY_SRSX11:
-                convLL.loadImpulseResponse(BinaryData::SRSX11LL_wav, BinaryData::SRSX11LL_wavSize, false, false, maxSize, false);
-                convLR.loadImpulseResponse(BinaryData::SRSX11LR_wav, BinaryData::SRSX11LR_wavSize, false, false, maxSize, false);
-                convRL.loadImpulseResponse(BinaryData::SRSX11RL_wav, BinaryData::SRSX11RL_wavSize, false, false, maxSize, false);
-                convRR.loadImpulseResponse(BinaryData::SRSX11RR_wav, BinaryData::SRSX11RR_wavSize, false, false, maxSize, false);
+                convLL.loadImpulseResponse(BinaryData::SonySRSX11LL_wav, BinaryData::SonySRSX11LL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::SonySRSX11LR_wav, BinaryData::SonySRSX11LR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::SonySRSX11RL_wav, BinaryData::SonySRSX11RL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::SonySRSX11RR_wav, BinaryData::SonySRSX11RR_wavSize, false, false, maxSize, false);
                 break;
             case GENELEC_6010_PAIR:
-                convLL.loadImpulseResponse(BinaryData::GenelecLL_wav, BinaryData::GenelecLL_wavSize, false, false, maxSize, false);
-                convLR.loadImpulseResponse(BinaryData::GenelecLR_wav, BinaryData::GenelecLR_wavSize, false, false, maxSize, false);
-                convRL.loadImpulseResponse(BinaryData::GenelecRL_wav, BinaryData::GenelecRL_wavSize, false, false, maxSize, false);
-                convRR.loadImpulseResponse(BinaryData::GenelecRR_wav, BinaryData::GenelecRR_wavSize, false, false, maxSize, false);
+                convLL.loadImpulseResponse(BinaryData::Gen6010ALL_wav, BinaryData::Gen6010ALL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::Gen6010ALR_wav, BinaryData::Gen6010ALR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::Gen6010ARL_wav, BinaryData::Gen6010ARL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::Gen6010ARR_wav, BinaryData::Gen6010ARR_wavSize, false, false, maxSize, false);
                 break;
             default:
-                convLL.loadImpulseResponse(BinaryData::SRSX11LL_wav, BinaryData::SRSX11LL_wavSize, false, false, maxSize, false);
-                convLR.loadImpulseResponse(BinaryData::SRSX11LR_wav, BinaryData::SRSX11LR_wavSize, false, false, maxSize, false);
-                convRL.loadImpulseResponse(BinaryData::SRSX11RL_wav, BinaryData::SRSX11RL_wavSize, false, false, maxSize, false);
-                convRR.loadImpulseResponse(BinaryData::SRSX11RR_wav, BinaryData::SRSX11RR_wavSize, false, false, maxSize, false);
+                convLL.loadImpulseResponse(BinaryData::SonySRSX11LL_wav, BinaryData::SonySRSX11LL_wavSize, false, false, maxSize, false);
+                convLR.loadImpulseResponse(BinaryData::SonySRSX11LR_wav, BinaryData::SonySRSX11LR_wavSize, false, false, maxSize, false);
+                convRL.loadImpulseResponse(BinaryData::SonySRSX11RL_wav, BinaryData::SonySRSX11RL_wavSize, false, false, maxSize, false);
+                convRR.loadImpulseResponse(BinaryData::SonySRSX11RR_wav, BinaryData::SonySRSX11RR_wavSize, false, false, maxSize, false);
                 break;
         }
     }

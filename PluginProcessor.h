@@ -1,9 +1,12 @@
 /*
  ==============================================================================
  
- This file was auto-generated!
+ Device Simulation Plugin - PluginProcessor.h
+ Author: Jason Loveridge
+ Date: 05/2018
+ BBC Research & Development
  
- It contains the basic framework code for a JUCE plugin processor.
+ Built upon JUCE plugin framework
  
  ==============================================================================
  */
@@ -58,27 +61,33 @@ public:
     
     void updateParameters();
     
+    //******************************************************************************
+    // Above is default JUCE framework code
+    // Below are functions and variables unique to this plugin
+    //******************************************************************************
+
     void changePhone(size_t maxSize, bool categoryChanged);
     void changeLaptop(size_t maxSize, bool categoryChanged);
     void changeTelevision(size_t maxSize, bool categoryChanged);
     void changeSpeaker(size_t maxSize, bool categoryChanged);
     
-    AudioParameterFloat* outputVolumeParam;
+    AudioParameterFloat* outputGainParam;
     AudioParameterChoice* categoryParam;
     AudioParameterChoice* phoneTypeParam;
     AudioParameterChoice* laptopTypeParam;
     AudioParameterChoice* tvTypeParam;
     AudioParameterChoice* speakerTypeParam;
-    
-    File otherIRFile;
-    File llIR, lrIR, rlIR, rrIR;
-    bool fileChanged = false;
+
     bool impulsesLoaded = false;
     
 private:
-    dsp::Convolution convolution;
+    enum Channels {
+        LEFT = 0,
+        RIGHT = 1
+    };
+    
     dsp::Convolution convLL, convLR, convRL, convRR;
-    dsp::Gain<float> outputVolume;
+    dsp::Gain<float> outputGain;
     
     Atomic<int> category;
     Atomic<int> phoneType;
